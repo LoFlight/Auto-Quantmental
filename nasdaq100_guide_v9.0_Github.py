@@ -1029,17 +1029,16 @@ def run(tickers=None, output=None):
     }}
     """
 
-    daily_briefing = {}
+daily_briefing = {}
     try:
         genai.configure(api_key=GEMINI_API_KEYS[0]) 
         model = genai.GenerativeModel('gemini-3.5-flash')
         response = model.generate_content(prompt)
         
         clean_text = response.text.strip().replace('```json', '').replace('```', '')
-
         daily_briefing = json.loads(clean_text)
         print("✅ 마켓 브리핑 생성 완료!")
-except Exception as e:
+    except Exception as e:
         print(f"⚠️ 브리핑 생성 실패: {e}")
         # 오류 발생 시 프로그램 종료 방지를 위한 기본값
         daily_briefing = {
@@ -1057,11 +1056,10 @@ except Exception as e:
     try: results_df.to_csv(csv_path, index=False, encoding="utf-8-sig")
     except: pass
     
-    # 💡 [추가된 2줄] 생성된 리포트를 웹사이트 메인 화면용인 'index.html'로 복사합니다.
     import shutil
     shutil.copyfile(report_path, "index.html")
     
-    print(f"\n✅ 완료! 리포트가 저장되었습니다: {report_path}")    
+    print(f"\n✅ 완료! 리포트가 저장되었습니다: {report_path}")
 
 if __name__ == "__main__":
     try:
