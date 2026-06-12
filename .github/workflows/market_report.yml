@@ -1,0 +1,45 @@
+name: Daily Quantamental Engine
+
+on:
+  schedule:
+    # 미국 증시 마감(EST 16:00 / EDT 16:00) 직후 실행
+    # UTC 기준 21:15에 실행하도록 설정 (한국시간 오전 6:15)
+    # 월요일~금요일 미국 장 마감에 맞추어 화요일~토요일(UTC 1~5)에 실행됩니다.
+    - cron: '15 21 * * 1-5'
+  
+  workflow_dispatch: # 웹에서 수동으로 버튼을 눌러 실행할 수 있게 해주는 기능
+
+permissions:
+  contents: write # 코드를 덮어쓰기 위한 쓰기 권한 부여
+
+jobs:
+  run-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 1. 내 저장소 코드 가져오기
+      uses: actions/checkout@v4
+
+    - name: 2. 파이썬 환경 세팅
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: 3. 필수 라이브러리 설치
+      run: |
+        python -m pip install --upgrade pip
+        pip install yfinance pandas numpy jinja2 lxml pyarrow google-generativeai
+
+    - name: 4. AI 퀀트멘털 엔진 실행
+      run: python nasdaq100_guide_v8.9.py
+
+    - name: 5. 새로 생성된 데이터 및 리포트를 GitHub에 덮어쓰기 (Commit & Push)
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add data/*
+        git add *.html
+        git add *.csv
+        # 변경된 파일이 있을 경우에만 커밋하고 푸시합니다.
+        git diff --quiet && git diff --staged --quiet || git commit -m "📊 Daily Market Data Auto-Update"
+        git push
