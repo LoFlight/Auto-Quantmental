@@ -1038,8 +1038,8 @@ def run(tickers=None, output=None):
         model = genai.GenerativeModel('gemini-3.5-flash')
         response = model.generate_content(prompt)
         
-        clean_text = response.text.strip().replace('```json', '').replace('
-```', '')
+        clean_text = response.text.strip().replace('```json', '').replace('```', '')
+
         daily_briefing = json.loads(clean_text)
         print("✅ 마켓 브리핑 생성 완료!")
     except Exception as e:
