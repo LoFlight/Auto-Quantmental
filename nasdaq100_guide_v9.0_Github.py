@@ -1054,14 +1054,17 @@ def run(tickers=None, output=None):
             "beginner_guide": {"summary": "현재 시황을 요약할 수 없습니다.", "mindset": "잠시 후 다시 실행해 주세요."}
         }
 
-    report_path = generate_report(results_df, market_env, market_date, top20_summaries=daily_briefing, output_path=output)
+report_path = generate_report(results_df, market_env, market_date, top20_summaries=daily_briefing, output_path=output)
     
     csv_path = report_path.replace(".html", ".csv")
     try: results_df.to_csv(csv_path, index=False, encoding="utf-8-sig")
     except: pass
     
-    print(f"\n✅ 완료! 리포트가 저장되었습니다: {report_path}")
+    # 💡 [추가된 2줄] 생성된 리포트를 웹사이트 메인 화면용인 'index.html'로 복사합니다.
+    import shutil
+    shutil.copyfile(report_path, "index.html")
     
+    print(f"\n✅ 완료! 리포트가 저장되었습니다: {report_path}")    
 if __name__ == "__main__":
     try:
         run()
