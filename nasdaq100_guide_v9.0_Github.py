@@ -36,12 +36,9 @@ import yfinance as yf
 import google.generativeai as genai
 from jinja2 import Template
 
-# 🌟 [필수 설정] 운용 중이신 Gemini API 키를 입력하세요
-GEMINI_API_KEYS = [
-    "AIzaSyBJKwODzj03AkPwZN07m8hfo7P5JdGzW3s",
-    "AIzaSyCne2kYip99iCajTW9G9-3ye8BP5NXjcCI"
-]
-
+# 🌟 깃허브 비밀 금고(Secrets)에서 API 키를 안전하게 불러옵니다.
+secret_key = os.environ.get("GEMINI_API_KEY")
+GEMINI_API_KEYS = [secret_key] if secret_key else []
 TOTAL_BUDGET = 55
 INSIDER_DAYS = 90
 BATCH_SIZE = 7
