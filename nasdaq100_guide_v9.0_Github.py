@@ -701,14 +701,12 @@ HTML_TEMPLATE = """
 <div class="section">
   <div class="sec-title">🎯 마켓 인텔리전스 (AI 통합 브리핑)</div>
   
-  <!-- HERO 영역 -->
   <div class="hero-box">
     <div class="hero-title">{{ top20_summaries.hero_title }}</div>
     <div style="font-size:13px;line-height:1.7;">{{ top20_summaries.hero_body | safe }}</div>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
-    <!-- 타임라인 패널 -->
     <div class="panel">
       <div class="ph"><span class="pt">주요 이슈 타임라인</span><span class="pb-badge pb-cyan">MARKET FLOW</span></div>
       <div>
@@ -724,7 +722,6 @@ HTML_TEMPLATE = """
       </div>
     </div>
 
-    <!-- 모닝 노트 패널 -->
     <div class="panel">
       <div class="ph"><span class="pt">모닝 노트 (특징주 뉴스)</span><span class="pb-badge pb-amber">MORNING NOTE</span></div>
       <div>
@@ -741,7 +738,6 @@ HTML_TEMPLATE = """
     </div>
   </div>
 
-  <!-- 전문가 시각 패널 -->
   <div class="panel">
     <div class="ph"><span class="pt">전문가 나침반 (시장 뷰)</span><span class="pb-badge pb-cyan">EXPERT COMPASS</span></div>
     <div class="exp-grid">
@@ -754,7 +750,6 @@ HTML_TEMPLATE = """
     </div>
   </div>
 
-  <!-- 초보자 가이드 패널 -->
   <div class="panel">
     <div class="ph"><span class="pt">💡 초보 투자자 핵심 정리</span><span class="pb-badge pb-amber">BEGINNER GUIDE</span></div>
     <div class="beg-grid">
@@ -864,7 +859,7 @@ def generate_report(results_df, market_env_data, market_date, top20_summaries=No
 def run(tickers=None, output=None):
     if tickers is None: tickers = get_latest_nasdaq100()
     if output is None:
-        # 💡 [핵심 수정] 다운로드 폴더가 아닌 reports 폴더에 자동 저장하도록 완벽 변경
+        # 💡 다운로드 폴더가 아닌 reports 폴더에 자동 저장하도록 변경
         os.makedirs("reports", exist_ok=True)
         date_str = datetime.now().strftime("%Y%m%d_%H%M")
         output = f"reports/quantamental_report_{date_str}.html"
@@ -970,7 +965,6 @@ def run(tickers=None, output=None):
     # ── 🌟 실시간 최신 마켓 브리핑 엔진 (Claude 스타일 + JSON 프롬프팅) ──────────
     print("\n🌐 시장 전체 및 주요 종목 뉴스 수집 중 (RSS)...")
     
-    # 시장 대표 ETF(SPY, QQQ)와 순위권 상위 7개 종목의 뉴스를 취합
     target_tickers = ["SPY", "QQQ"] + [r["ticker"] for _, r in results_df.head(7).iterrows()]
     aggregated_news = []
 
@@ -997,7 +991,6 @@ def run(tickers=None, output=None):
 
     print("🤖 Gemini: 수집된 전체 뉴스를 바탕으로 클로드 수준의 심층 브리핑 리포트를 작성합니다...")
     
-    # JSON 파싱 시 파이썬 오류를 막기 위해 f-string 안의 중괄호는 {{ }} 형태로 이스케이프 처리
     prompt = f"""
     당신은 월스트리트 최고 수준의 시황 분석가입니다. 
     다음은 오늘 시장 대표 ETF(SPY, QQQ) 및 나스닥 핵심 종목들의 최신 뉴스 헤드라인입니다.
@@ -1029,18 +1022,20 @@ def run(tickers=None, output=None):
     }}
     """
 
-daily_briefing = {}
+    daily_briefing = {}
     try:
-        genai.configure(api_key=GEMINI_API_KEYS[0]) 
-        model = genai.GenerativeModel('gemini-3.5-flash')
-        response = model.generate_content(prompt)
-        
-        clean_text = response.text.strip().replace('```json', '').replace('```', '')
-        daily_briefing = json.loads(clean_text)
-        print("✅ 마켓 브리핑 생성 완료!")
+        if GEMINI_API_KEYS:
+            genai.configure(api_key=GEMINI_API_KEYS[0]) 
+            model = genai.GenerativeModel('gemini-3.5-flash')
+            response = model.generate_content(prompt)
+            
+            clean_text = response.text.strip().replace('```json', '').replace('```', '')
+            daily_briefing = json.loads(clean_text)
+            print("✅ 마켓 브리핑 생성 완료!")
+        else:
+            print("⚠️ API 키가 설정되지 않아 브리핑 생성을 건너뜁니다.")
     except Exception as e:
         print(f"⚠️ 브리핑 생성 실패: {e}")
-        # 오류 발생 시 프로그램 종료 방지를 위한 기본값
         daily_briefing = {
             "hero_title": "⚠️ 시장 분석 데이터 지연",
             "hero_body": "API 데이터 파싱 문제로 인해 텍스트 분석 데이터를 불러오지 못했습니다.",
