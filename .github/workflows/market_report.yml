@@ -3,10 +3,13 @@ name: Daily Quantamental Engine
 on:
   schedule:
     - cron: '15 21 * * 1-5'
-  workflow_dispatch:
+  workflow_dispatch: # 💡 이 줄이 바로 수동 실행 버튼을 만들어주는 핵심입니다!
 
 permissions:
   contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   run-analysis:
@@ -26,9 +29,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install yfinance pandas numpy jinja2 lxml pyarrow google-generativeai
 
-- name: 4. AI 퀀트멘털 엔진 실행
+    - name: 4. AI 퀀트멘털 엔진 실행
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      # ⚠️ 주의: 아래 파일명은 현재 깃허브에 올라가 있는 파이썬 파일명과 정확히 일치해야 합니다!
       run: python nasdaq100_guide_v9.0_Github.py
 
     - name: 5. 새로 생성된 데이터 및 리포트를 GitHub에 덮어쓰기 (Commit & Push)
