@@ -1039,7 +1039,7 @@ def run(tickers=None, output=None):
 
         daily_briefing = json.loads(clean_text)
         print("✅ 마켓 브리핑 생성 완료!")
-    except Exception as e:
+except Exception as e:
         print(f"⚠️ 브리핑 생성 실패: {e}")
         # 오류 발생 시 프로그램 종료 방지를 위한 기본값
         daily_briefing = {
@@ -1051,7 +1051,7 @@ def run(tickers=None, output=None):
             "beginner_guide": {"summary": "현재 시황을 요약할 수 없습니다.", "mindset": "잠시 후 다시 실행해 주세요."}
         }
 
-report_path = generate_report(results_df, market_env, market_date, top20_summaries=daily_briefing, output_path=output)
+    report_path = generate_report(results_df, market_env, market_date, top20_summaries=daily_briefing, output_path=output)
     
     csv_path = report_path.replace(".html", ".csv")
     try: results_df.to_csv(csv_path, index=False, encoding="utf-8-sig")
@@ -1062,6 +1062,7 @@ report_path = generate_report(results_df, market_env, market_date, top20_summari
     shutil.copyfile(report_path, "index.html")
     
     print(f"\n✅ 완료! 리포트가 저장되었습니다: {report_path}")    
+
 if __name__ == "__main__":
     try:
         run()
