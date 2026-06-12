@@ -1,7 +1,7 @@
 """
 =============================================================
-  퀀트멘털(Quantamental) v8.9.1 — 리얼타임 AI 뉴스 통합 엔진
-  [업데이트] 클로드 스타일 심층 마켓 브리핑 (JSON 엔진) 적용
+  퀀트멘털(Quantamental) v8.9.2 — 리얼타임 AI 뉴스 통합 엔진
+  [업데이트] 클로드 스타일 심층 마켓 브리핑 및 클라우드(GitHub) 저장 최적화
 =============================================================
 """
 
@@ -537,7 +537,7 @@ def calc_allocation(ranked_df, total_budget=55):
     return top10
 
 # ─────────────────────────────────────────────────────────────
-#  4. HTML 생성 및 템플릿
+#  4. HTML 생성
 # ─────────────────────────────────────────────────────────────
 def get_score_color(total):
     if   total >= 95: return "#7c3aed"
@@ -704,12 +704,14 @@ HTML_TEMPLATE = """
 <div class="section">
   <div class="sec-title">🎯 마켓 인텔리전스 (AI 통합 브리핑)</div>
   
+  <!-- HERO 영역 -->
   <div class="hero-box">
     <div class="hero-title">{{ top20_summaries.hero_title }}</div>
     <div style="font-size:13px;line-height:1.7;">{{ top20_summaries.hero_body | safe }}</div>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+    <!-- 타임라인 패널 -->
     <div class="panel">
       <div class="ph"><span class="pt">주요 이슈 타임라인</span><span class="pb-badge pb-cyan">MARKET FLOW</span></div>
       <div>
@@ -725,6 +727,7 @@ HTML_TEMPLATE = """
       </div>
     </div>
 
+    <!-- 모닝 노트 패널 -->
     <div class="panel">
       <div class="ph"><span class="pt">모닝 노트 (특징주 뉴스)</span><span class="pb-badge pb-amber">MORNING NOTE</span></div>
       <div>
@@ -741,6 +744,7 @@ HTML_TEMPLATE = """
     </div>
   </div>
 
+  <!-- 전문가 시각 패널 -->
   <div class="panel">
     <div class="ph"><span class="pt">전문가 나침반 (시장 뷰)</span><span class="pb-badge pb-cyan">EXPERT COMPASS</span></div>
     <div class="exp-grid">
@@ -753,6 +757,7 @@ HTML_TEMPLATE = """
     </div>
   </div>
 
+  <!-- 초보자 가이드 패널 -->
   <div class="panel">
     <div class="ph"><span class="pt">💡 초보 투자자 핵심 정리</span><span class="pb-badge pb-amber">BEGINNER GUIDE</span></div>
     <div class="beg-grid">
@@ -860,12 +865,12 @@ def generate_report(results_df, market_env_data, market_date, top20_summaries=No
 #  5. 메인 실행 블록
 # ─────────────────────────────────────────────────────────────
 def run(tickers=None, output=None):
-    import webbrowser
     if tickers is None: tickers = get_latest_nasdaq100()
     if output is None:
+        # 💡 [핵심 수정] 다운로드 폴더가 아닌 reports 폴더에 자동 저장하도록 완벽 변경
+        os.makedirs("reports", exist_ok=True)
         date_str = datetime.now().strftime("%Y%m%d_%H%M")
-        # 현재 실행 중인 폴더(GitHub 저장소 내부)에 바로 저장하도록 변경
-        output = f"quantamental_report_{date_str}.html"
+        output = f"reports/quantamental_report_{date_str}.html"
 
     print(f"\n📊 퀀트멘털 v8.9 엔진 시작! 총 {len(tickers)}개 종목 분석\n") 
     all_stock_data, all_fundamentals, all_insider = {}, {}, {}
@@ -1033,7 +1038,8 @@ def run(tickers=None, output=None):
         model = genai.GenerativeModel('gemini-3.5-flash')
         response = model.generate_content(prompt)
         
-        clean_text = response.text.strip().replace('```json', '').replace('```', '')
+        clean_text = response.text.strip().replace('```json', '').replace('
+```', '')
         daily_briefing = json.loads(clean_text)
         print("✅ 마켓 브리핑 생성 완료!")
     except Exception as e:
@@ -1055,11 +1061,7 @@ def run(tickers=None, output=None):
     except: pass
     
     print(f"\n✅ 완료! 리포트가 저장되었습니다: {report_path}")
-    try: 
-        import webbrowser
-        webbrowser.open('file://' + os.path.realpath(report_path))
-    except: pass
-
+    
 if __name__ == "__main__":
     try:
         run()
@@ -1068,5 +1070,3 @@ if __name__ == "__main__":
         print("  🚨 프로그램 실행 중 에러가 발생했습니다!")
         print("!"*60 + "\n")
         traceback.print_exc()
-    finally:
-        input("\n실행 완료. 창을 닫으려면 엔터 키를 누르세요...")
