@@ -859,7 +859,7 @@ def generate_report(results_df, market_env_data, market_date, top20_summaries=No
 def run(tickers=None, output=None):
     if tickers is None: tickers = get_latest_nasdaq100()
     if output is None:
-        # 💡 다운로드 폴더가 아닌 reports 폴더에 자동 저장하도록 변경 (GitHub Actions 구조 유지)
+        # 💡 다운로드 폴더가 아닌 reports 폴더에 자동 저장하도록 변경
         os.makedirs("reports", exist_ok=True)
         date_str = datetime.now().strftime("%Y%m%d_%H%M")
         output = f"reports/quantamental_report_{date_str}.html"
@@ -971,12 +971,7 @@ def run(tickers=None, output=None):
     for tkr in target_tickers:
         try:
             url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={tkr}&region=US&lang=en-US"
-            # ⭐️ 깃허브 서버 IP 차단 우회를 위한 브라우저 헤더 위장
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-            }
-            req = urllib.request.Request(url, headers=headers)
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
             xml_data = urllib.request.urlopen(req, timeout=5).read()
             root = ET.fromstring(xml_data)
             
@@ -988,15 +983,9 @@ def run(tickers=None, output=None):
                     aggregated_news.append(f"[{tkr}] {title} ({pub_date[:16]})")
                     count += 1
                 if count >= 4: break
-        except Exception as e:
-            print(f"  [!] {tkr} 뉴스 수집 실패: {e}")
+        except Exception:
             pass
-        time.sleep(0.3)
-
-    # ⭐️ 야후에서 완전히 차단당해 뉴스를 못 가져왔을 때의 안전장치
-    if not aggregated_news:
-        print("⚠️ 주의: 통신 제한으로 뉴스를 가져오지 못했습니다. 기술적 지표 기반으로 브리핑을 대체합니다.")
-        aggregated_news.append("[시장 알림] 현재 외부 뉴스 서버 접속 제한으로 세부 뉴스를 불러올 수 없습니다. 오늘 수집된 주요 기술적 분석 지표와 증시 전반의 흐름만으로 시황을 유추하여 브리핑을 작성하세요.")
+        time.sleep(0.2)
 
     news_text_block = "\n".join(aggregated_news)
 
@@ -1035,34 +1024,36 @@ def run(tickers=None, output=None):
 
     daily_briefing = {}
     try:
-        # ⭐️ 깃허브 Secrets에서 불러온 API 키 1개를 사용
         if GEMINI_API_KEYS:
             genai.configure(api_key=GEMINI_API_KEYS[0]) 
+            model = genai.GenerativeModel('gemini-3.5-flash')
             
-            # ⭐️ 하루 1,500회 무료인 최신 1.5 버전 사용 (한도 문제 해결)
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            
+            # ⭐️ 변경점 1: 최대 3번까지 재시도하는 로직 추가
             max_retries = 3
+            
             for attempt in range(max_retries):
                 try:
                     response = model.generate_content(prompt)
                     
+                    # ⭐️ 변경점 2: 정규식을 사용해 앞뒤 불필요한 텍스트를 무시하고 JSON 객체 부분만 추출
                     import re
                     json_match = re.search(r'\{.*\}', response.text.strip(), re.DOTALL)
                     
                     if json_match:
                         clean_text = json_match.group(0)
+                        
+                        # ⭐️ 변경점 3: strict=False 옵션을 주어 AI가 넣은 줄바꿈 제어문자(\n 등)를 유연하게 허용
                         daily_briefing = json.loads(clean_text, strict=False)
                         print("✅ 마켓 브리핑 생성 완료!")
-                        break 
+                        break  # 성공하면 재시도 루프 탈출
                     else:
                         raise ValueError("응답에서 JSON 형식을 찾을 수 없습니다.")
                         
                 except Exception as inner_e:
                     print(f"   [!] {attempt+1}차 브리핑 파싱 실패: {inner_e}")
                     if attempt == max_retries - 1:
-                        raise 
-                    time.sleep(3) 
+                        raise  # 마지막 3번째 시도까지 실패하면 하단의 except 블록으로 에러를 넘김
+                    time.sleep(2) # 2초 대기 후 재시도
         else:
             print("⚠️ API 키가 설정되지 않아 브리핑 생성을 건너뜁니다.")
     except Exception as e:
@@ -1082,12 +1073,8 @@ def run(tickers=None, output=None):
     try: results_df.to_csv(csv_path, index=False, encoding="utf-8-sig")
     except: pass
     
-    # GitHub Pages 호스팅을 위해 index.html 복사
     import shutil
-    try:
-        shutil.copyfile(report_path, "index.html")
-    except Exception as e:
-        print(f"  ⚠️ index.html 복사 실패: {e}")
+    shutil.copyfile(report_path, "index.html")
     
     print(f"\n✅ 완료! 리포트가 저장되었습니다: {report_path}")
 
