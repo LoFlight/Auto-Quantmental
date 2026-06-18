@@ -971,12 +971,7 @@ def run(tickers=None, output=None):
     for tkr in target_tickers:
         try:
             url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={tkr}&region=US&lang=en-US"
-            # ⭐️ 변경 1: 차단 확률을 낮추기 위해 웹 브라우저인 것처럼 헤더를 강력하게 위장
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-            }
-            req = urllib.request.Request(url, headers=headers)
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
             xml_data = urllib.request.urlopen(req, timeout=5).read()
             root = ET.fromstring(xml_data)
             
@@ -988,18 +983,9 @@ def run(tickers=None, output=None):
                     aggregated_news.append(f"[{tkr}] {title} ({pub_date[:16]})")
                     count += 1
                 if count >= 4: break
-        except Exception as e:
-            # ⭐️ 변경 2: 깃허브 로그에서 차단 여부를 확인할 수 있도록 에러 메시지 출력
-            print(f"  [!] {tkr} 뉴스 수집 실패 (IP차단 의심): {e}")
+        except Exception:
             pass
-        time.sleep(0.3) # 서버 부하를 줄이기 위해 대기 시간 약간 증가
-
-    # ⭐️ 변경 3: 모든 뉴스가 차단당해서 빈 깡통이 되었을 때의 안전장치
-    if not aggregated_news:
-        print("⚠️ 주의: 통신 제한으로 뉴스를 가져오지 못했습니다. 기술적 지표 기반으로 브리핑을 대체합니다.")
-        aggregated_news.append("[시장 알림] 현재 외부 뉴스 서버 접속 제한으로 세부 뉴스를 불러올 수 없습니다. 오늘 수집된 주요 기술적 분석 지표와 증시 전반의 흐름만으로 시황을 유추하여 브리핑을 작성하세요.")
-
-    news_text_block = "\n".join(aggregated_news)
+        time.sleep(0.2)
 
     news_text_block = "\n".join(aggregated_news)
 
