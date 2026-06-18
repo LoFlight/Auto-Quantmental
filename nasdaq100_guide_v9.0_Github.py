@@ -1027,15 +1027,37 @@ def run(tickers=None, output=None):
         if GEMINI_API_KEYS:
             genai.configure(api_key=GEMINI_API_KEYS[0]) 
             model = genai.GenerativeModel('gemini-3.5-flash')
-            response = model.generate_content(prompt)
             
-            clean_text = response.text.strip().replace('```json', '').replace('```', '')
-            daily_briefing = json.loads(clean_text)
-            print("✅ 마켓 브리핑 생성 완료!")
+            # ⭐️ 변경점 1: 최대 3번까지 재시도하는 로직 추가
+            max_retries = 3
+            
+            for attempt in range(max_retries):
+                try:
+                    response = model.generate_content(prompt)
+                    
+                    # ⭐️ 변경점 2: 정규식을 사용해 앞뒤 불필요한 텍스트를 무시하고 JSON 객체 부분만 추출
+                    import re
+                    json_match = re.search(r'\{.*\}', response.text.strip(), re.DOTALL)
+                    
+                    if json_match:
+                        clean_text = json_match.group(0)
+                        
+                        # ⭐️ 변경점 3: strict=False 옵션을 주어 AI가 넣은 줄바꿈 제어문자(\n 등)를 유연하게 허용
+                        daily_briefing = json.loads(clean_text, strict=False)
+                        print("✅ 마켓 브리핑 생성 완료!")
+                        break  # 성공하면 재시도 루프 탈출
+                    else:
+                        raise ValueError("응답에서 JSON 형식을 찾을 수 없습니다.")
+                        
+                except Exception as inner_e:
+                    print(f"   [!] {attempt+1}차 브리핑 파싱 실패: {inner_e}")
+                    if attempt == max_retries - 1:
+                        raise  # 마지막 3번째 시도까지 실패하면 하단의 except 블록으로 에러를 넘김
+                    time.sleep(2) # 2초 대기 후 재시도
         else:
             print("⚠️ API 키가 설정되지 않아 브리핑 생성을 건너뜁니다.")
     except Exception as e:
-        print(f"⚠️ 브리핑 생성 실패: {e}")
+        print(f"⚠️ 브리핑 생성 최종 실패: {e}")
         daily_briefing = {
             "hero_title": "⚠️ 시장 분석 데이터 지연",
             "hero_body": "API 데이터 파싱 문제로 인해 텍스트 분석 데이터를 불러오지 못했습니다.",
