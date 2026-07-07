@@ -27,18 +27,26 @@ jobs:
     - name: 3. 필수 라이브러리 설치
       run: |
         python -m pip install --upgrade pip
-        pip install yfinance pandas numpy jinja2 lxml pyarrow google-generativeai
+        # 💡 추가: AI 학습(ai_trainer_final.py)에 필요한 scikit-learn, lightgbm 라이브러리 명시적 추가
+        pip install yfinance pandas numpy jinja2 lxml pyarrow google-generativeai scikit-learn lightgbm
 
     - name: 4. AI 퀀트멘털 엔진 실행
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      # ⚠️ 주의: 아래 파일명은 현재 깃허브에 올라가 있는 파이썬 파일명과 정확히 일치해야 합니다!
-      run: python nasdaq100_guide_v9.0_Github.py
+      # ⚠️ 수정: 업로드하신 파이썬 파일명 버전에 맞게 v9.1로 변경했습니다.
+      run: python nasdaq100_guide_v9.1_Github.py
 
-    - name: 5. 새로 생성된 데이터 및 리포트를 GitHub에 덮어쓰기 (Commit & Push)
+    - name: 5. 새로 생성된 데이터, 리포트 및 AI 모델을 GitHub에 덮어쓰기 (Commit & Push)
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add .
-        git diff --quiet && git diff --staged --quiet || git commit -m "📊 Daily Market Data Auto-Update"
+        
+        # 💡 수정: 불필요한 캐시 파일이 깃허브에 올라가는 것을 막기 위해, 꼭 필요한 폴더와 파일만 명시적으로 지정합니다.
+        git add data/
+        git add quantamental_models/ 
+        git add index.html
+        git add reports/
+        
+        # 커밋 메시지도 모델 업데이트가 포함되었음을 알 수 있게 수정했습니다.
+        git diff --quiet && git diff --staged --quiet || git commit -m "📊 Daily Market Data & AI Model Auto-Update"
         git push
