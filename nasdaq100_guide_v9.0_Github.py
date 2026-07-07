@@ -1082,8 +1082,10 @@ def run(tickers=None, output=None):
     try: results_df.to_csv(csv_path, index=False, encoding="utf-8-sig")
     except: pass
     
-    # GitHub Pages 호스팅을 위해 index.html 복사
+# GitHub Pages 호스팅을 위해 index.html 복사
     import shutil
+    import subprocess # 서브프로세스 모듈 추가
+    
     try:
         shutil.copyfile(report_path, "index.html")
     except Exception as e:
@@ -1091,11 +1093,15 @@ def run(tickers=None, output=None):
     
     print(f"\n✅ 완료! 리포트가 저장되었습니다: {report_path}")
 
+    # 🌟 AI 모델 증분 학습 자동 실행 추가
+    print("\n🤖 AI 모델 자동 증분 학습(Update)을 시작합니다...")
+    try:
+        # sys.executable을 사용해 현재 실행 중인 파이썬 환경에서 트레이너 스크립트 실행
+        subprocess.run([sys.executable, "ai_trainer_final.py", "--mode", "update"], check=True)
+        print("  ✅ AI 증분 학습 및 모델 저장 완료!")
+    except Exception as e:
+        print(f"  ⚠️ AI 학습 중 오류 발생: {e}")
+
 if __name__ == "__main__":
     try:
-        run()
-    except Exception as e:
-        print("\n" + "!"*60)
-        print("  🚨 프로그램 실행 중 에러가 발생했습니다!")
-        print("!"*60 + "\n")
-        traceback.print_exc()
+...
