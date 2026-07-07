@@ -1104,4 +1104,9 @@ def run(tickers=None, output=None):
 
 if __name__ == "__main__":
     try:
-...
+        run()
+    except Exception as e:
+        print("\n" + "!"*60)
+        print("  🚨 프로그램 실행 중 에러가 발생했습니다!")
+        print("!"*60 + "\n")
+        traceback.print_exc()
