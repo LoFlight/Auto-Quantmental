@@ -47,35 +47,49 @@
   ],
   "horizons": {
     "T1": {
-      "trained_at": "2026-07-02T16:35:37.914074",
-      "n_samples": 2217,
-      "cv_mae": 2.3193,
-      "recent_mae": 2.3193,
-      "best_iter": 121,
+      "trained_at": "2026-08-01T23:07:08.609410",
+      "n_samples": 4035,
+      "cv_mae": 2.3586,
+      "recent_mae": 2.3586,
+      "best_iter": 118,
       "is_initial": true,
       "label": "다음날",
       "top3": [
-        "market_breadth",
         "price_to_ma120",
-        "rel_momentum"
+        "market_breadth",
+        "macd_hist"
       ]
     },
     "T5": {
-      "trained_at": "2026-07-02T16:35:38.234387",
-      "n_samples": 1803,
-      "cv_mae": 4.6705,
-      "recent_mae": 4.6705,
-      "best_iter": 111,
+      "trained_at": "2026-08-01T23:07:09.097383",
+      "n_samples": 3611,
+      "cv_mae": 4.7665,
+      "recent_mae": 4.7665,
+      "best_iter": 84,
       "is_initial": true,
       "label": "1주 후",
       "top3": [
         "price_to_ma120",
-        "rsi",
-        "pct_change"
+        "market_breadth",
+        "bb_width"
+      ]
+    },
+    "T21": {
+      "trained_at": "2026-08-01T23:07:09.427056",
+      "n_samples": 1920,
+      "cv_mae": 8.9759,
+      "recent_mae": 8.9759,
+      "best_iter": 47,
+      "is_initial": true,
+      "label": "1개월 후",
+      "top3": [
+        "price_to_ma120",
+        "p1_p2_ratio",
+        "macd_hist"
       ]
     }
   },
   "last_full": {
-    "T1,T5,T21,T63,T126,T252": "2026-07-02T16:35:38.253217"
+    "T1,T5,T21,T63,T126,T252": "2026-08-01T23:07:09.450292"
   }
 }
