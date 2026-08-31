@@ -63,53 +63,57 @@
     "2026-08-25",
     "2026-08-26",
     "2026-08-27",
-    "2026-08-28"
+    "2026-08-28",
+    "2026-08-31"
   ],
   "horizons": {
     "T1": {
-      "trained_at": "2026-08-01T23:07:08.609410",
-      "n_samples": 4035,
-      "cv_mae": 2.3586,
-      "recent_mae": 2.3586,
-      "best_iter": 118,
-      "is_initial": true,
+      "trained_at": "2026-08-31T23:24:42.403087",
+      "n_samples": 6448,
+      "cv_mae": 2.2605,
+      "recent_mae": 2.2605,
+      "best_iter": 130,
+      "is_initial": false,
       "label": "다음날",
       "top3": [
-        "price_to_ma120",
         "market_breadth",
+        "price_to_ma120",
         "macd_hist"
       ]
     },
     "T5": {
-      "trained_at": "2026-08-01T23:07:09.097383",
-      "n_samples": 3611,
-      "cv_mae": 4.7665,
-      "recent_mae": 4.7665,
-      "best_iter": 84,
-      "is_initial": true,
+      "trained_at": "2026-08-31T23:24:42.842676",
+      "n_samples": 6024,
+      "cv_mae": 4.9083,
+      "recent_mae": 4.9083,
+      "best_iter": 61,
+      "is_initial": false,
       "label": "1주 후",
       "top3": [
         "price_to_ma120",
-        "market_breadth",
-        "bb_width"
+        "bb_width",
+        "macd_hist"
       ]
     },
     "T21": {
-      "trained_at": "2026-08-01T23:07:09.427056",
-      "n_samples": 1920,
-      "cv_mae": 8.9759,
-      "recent_mae": 8.9759,
-      "best_iter": 47,
-      "is_initial": true,
+      "trained_at": "2026-08-31T23:24:43.179038",
+      "n_samples": 4333,
+      "cv_mae": 9.367,
+      "recent_mae": 9.367,
+      "best_iter": 31,
+      "is_initial": false,
       "label": "1개월 후",
       "top3": [
         "price_to_ma120",
         "p1_p2_ratio",
-        "macd_hist"
+        "p2"
       ]
     }
   },
   "last_full": {
-    "T1,T5,T21,T63,T126,T252": "2026-08-01T23:07:09.450292"
+    "T1,T5,T21,T63,T126,T252": "2026-08-01T23:07:09.450292",
+    "T1": "2026-08-31T23:24:42.414104",
+    "T5": "2026-08-31T23:24:42.853628",
+    "T21": "2026-08-31T23:24:43.189759"
   }
 }
