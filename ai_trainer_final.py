@@ -1,14 +1,14 @@
 """
 ================================================================
-  퀀트멘털 AI 학습 시스템 v4.0 — 통합 최종본
+  퀀트멘털 AI 학습 시스템 v4.1 — 통합 최종본 (증분 학습 타겟 매칭 패치)
 ================================================================
-  [v2_0 대비 수정 사항 6가지]
+  [수정 사항]
   Fix1  최종 모델 scaler를 train 80%로만 fit → 누수 완전 제거
   Fix2  CV best_iteration 평균 → 최종 모델 n_estimators 적용
   Fix3  볼린저밴드·MACD, 데이터 부족 시 자동 비활성화
-  Fix4  증분 학습 (init_model) 추가 → 매일 수초 완료
+  Fix4  증분 학습 시 오늘 확정된 과거 타겟 행(target_date) 정확히 매칭
   Fix5  시장 매크로 피처 → 종목별 상대 지표로 교체 (변별력 향상)
-  Fix6  학습 후 MAE 모니터링 + 드리프트 경고 자동화
+  Fix6  학습 후 MAE 모니터링 + 드리프트 경고 + 예측 CSV 자동 갱신
 
   [실행 방법]
   python ai_trainer_final.py                      ← 대화형 실행
@@ -99,10 +99,10 @@ ALL_FEATURES = RAW_FEATURES + DERIVED_FEATURES
 def load_and_preprocess(csv_path: str) -> pd.DataFrame:
     df = pd.read_csv(csv_path, encoding="utf-8-sig")
     df["date"] = pd.to_datetime(df["date"])
+    # 혹시라도 동일 날짜+티커 중복이 있을 경우 마지막 행만 유지
+    df = df.drop_duplicates(subset=["date", "ticker"], keep="last")
     df = df.sort_values(["ticker","date"]).reset_index(drop=True)
     df["zero_flag"] = df["zero_flag"].astype(str).str.lower().eq("true").astype(float)
-
-    n_days = df["date"].nunique()
 
     # ── 기본 파생 피처 ────────────────────────────────────
     ma120 = df.get("ma120", pd.Series(np.nan, index=df.index))
@@ -115,12 +115,10 @@ def load_and_preprocess(csv_path: str) -> pd.DataFrame:
     df["p5_p3_delta"]    = df["p5"] - df["p3"]
 
     # ── 기술적 지표 (Fix3: 충분한 데이터 있을 때만) ──────
-    # pandas 3.x 호환: groupby().apply() 대신 for 루프 사용
     tech_chunks = []
     for tkr, grp in df.groupby("ticker"):
         grp = grp.copy()
 
-        # 볼린저밴드: 최소 20거래일 필요
         if len(grp) >= 20:
             ma20  = grp["price"].rolling(20, min_periods=20).mean()
             std20 = grp["price"].rolling(20, min_periods=20).std()
@@ -129,10 +127,9 @@ def load_and_preprocess(csv_path: str) -> pd.DataFrame:
             grp["bb_width"]    = ((bb_up - bb_lo) / ma20.replace(0, np.nan)).fillna(0)
             grp["bb_position"] = ((grp["price"] - bb_lo) / (bb_up - bb_lo + 1e-8)).clip(0, 1).fillna(0.5)
         else:
-            grp["bb_width"]    = 0.0   # 데이터 부족 → 중립
+            grp["bb_width"]    = 0.0
             grp["bb_position"] = 0.5
 
-        # MACD: 최소 35거래일 필요
         if len(grp) >= 35:
             ema12 = grp["price"].ewm(span=12, adjust=False).mean()
             ema26 = grp["price"].ewm(span=26, adjust=False).mean()
@@ -140,7 +137,7 @@ def load_and_preprocess(csv_path: str) -> pd.DataFrame:
             sig   = macd.ewm(span=9, adjust=False).mean()
             grp["macd_hist"] = (macd - sig).fillna(0)
         else:
-            grp["macd_hist"] = 0.0     # 데이터 부족 → 중립
+            grp["macd_hist"] = 0.0
 
         tech_chunks.append(grp)
 
@@ -153,17 +150,23 @@ def load_and_preprocess(csv_path: str) -> pd.DataFrame:
         market_breadth=("pct_change", lambda x: (x>0).mean())
     ).reset_index()
     df = df.merge(mkt, on="date", how="left")
-    df["rel_momentum"] = df["pct_change"] - df["mkt_pct"]   # 시장 대비 초과 등락률
-    df["rel_rsi"]      = df["rsi"]        - df["mkt_rsi"]   # 시장 대비 상대 RSI
+    df["rel_momentum"] = df["pct_change"] - df["mkt_pct"]
+    df["rel_rsi"]      = df["rsi"]        - df["mkt_rsi"]
     df.drop(columns=["mkt_pct","mkt_rsi"], inplace=True)
 
-    # ── 타겟 라벨 ─────────────────────────────────────────
+    # ── 타겟 라벨 및 타겟 확정일(target_date) 계산 ──────────
     for h, days in HORIZONS.items():
         df[f"target_{h}"] = (
             df.groupby("ticker")["price"]
             .shift(-days)
             .div(df["price"])
             .sub(1).mul(100)
+        )
+        # 해당 타겟 수익률이 실제로 확정되는 미래의 날짜 기록 (증분 학습 매칭용)
+        df[f"target_date_{h}"] = (
+            df.groupby("ticker")["date"]
+            .shift(-days)
+            .dt.strftime("%Y-%m-%d")
         )
 
     # 누락 컬럼 보완
@@ -194,8 +197,11 @@ class State:
         all_ = set(df["date"].dt.strftime("%Y-%m-%d").unique())
         return sorted(all_ - seen)
 
-    def mark(self, dates):
-        self.d["trained_dates"] = sorted(set(self.d["trained_dates"]) | set(dates))
+    def mark(self, dates, valid_all_dates=None):
+        updated = set(self.d["trained_dates"]) | set(dates)
+        if valid_all_dates is not None:
+            updated = updated & set(valid_all_dates)
+        self.d["trained_dates"] = sorted(updated)
         self.save()
 
     def hset(self, h, meta):
@@ -237,8 +243,6 @@ LGB_BASE = dict(
 def full_train(df, state, targets=None, force=False, silent=False):
     """
     완전 재학습 (Fix1 + Fix2 적용)
-    Fix1: train 80% 로만 scaler.fit
-    Fix2: CV best_iteration 평균 → 최종 n_estimators
     """
     targets = targets or list(HORIZONS.keys())
     n_days  = df["date"].nunique()
@@ -269,13 +273,11 @@ def full_train(df, state, targets=None, force=False, silent=False):
         X = valid[ALL_FEATURES].fillna(0)
         y = valid[target_col].clip(-50, 50)
 
-        # Fix2: CV에서 best_iteration 수집
         tscv = TimeSeriesSplit(n_splits=5)
         best_iters, cv_maes = [], []
         n_train = int(len(X) * 0.8)
 
         for tr_idx, val_idx in tscv.split(X):
-            # Fix1: train 구간으로만 scaler fit
             fold_sc = RobustScaler().fit(X.iloc[tr_idx])
             Xtr = fold_sc.transform(X.iloc[tr_idx])
             Xvl = fold_sc.transform(X.iloc[val_idx])
@@ -289,12 +291,10 @@ def full_train(df, state, targets=None, force=False, silent=False):
             best_iters.append(m.best_iteration_)
             cv_maes.append(mean_absolute_error(yvl, m.predict(Xvl)))
 
-        # Fix1: 최종 모델도 train 80%로만 scaler fit
         final_sc = RobustScaler().fit(X.iloc[:n_train])
         Xf = final_sc.transform(X)
 
-        # Fix2: best_iteration 평균으로 최종 트리 수 결정
-        best_n = int(np.mean(best_iters))
+        best_n = max(10, int(np.mean(best_iters)))
         params = dict(LGB_BASE, n_estimators=best_n)
         final  = lgb.LGBMRegressor(**params)
         final.fit(Xf, y, callbacks=[lgb.log_evaluation(-1)])
@@ -311,6 +311,7 @@ def full_train(df, state, targets=None, force=False, silent=False):
             "cv_mae":      round(mae_cv, 4),
             "recent_mae":  round(mae_cv, 4),
             "best_iter":   best_n,
+            "total_trees": final.booster_.num_trees(),
             "is_initial":  not force,
             "label":       HORIZON_LABELS[h],
             "top3":        [f[0] for f in top3],
@@ -322,14 +323,14 @@ def full_train(df, state, targets=None, force=False, silent=False):
 
     _save_raw(boosters, scalers)
     all_dates = df["date"].dt.strftime("%Y-%m-%d").unique().tolist()
-    state.mark(all_dates)
+    state.mark(all_dates, valid_all_dates=all_dates)
     state.d["last_full"][",".join(targets)] = datetime.now().isoformat()
     state.save()
     return boosters, scalers
 
 
 def incremental_update(df, state):
-    """증분 학습 — 새 날짜 데이터만 수초 안에 처리 (Fix4)"""
+    """증분 학습 — 새 날짜 도착으로 정답지(target)가 확정된 과거 행들을 학습"""
     new_dates = state.new_dates(df)
     if not new_dates:
         print("  ✅ 새 데이터 없음 — 업데이트 불필요")
@@ -340,13 +341,22 @@ def incremental_update(df, state):
         full_train(df, state)
         return
 
-    print(f"  ⚡ 증분 학습: {new_dates}")
+    print(f"  ⚡ 증분 학습 기준일: {new_dates}")
     boosters, scalers = _load_raw()
     t0 = time.time()
+    n_days = df["date"].nunique()
 
     for h in HORIZONS:
-        if h not in boosters: continue
         target_col = f"target_{h}"
+        target_date_col = f"target_date_{h}"
+
+        # 기존에 데이터 부족으로 미생성된 모델이 최소 일수를 충족했으면 신규 학습
+        if h not in boosters:
+            if n_days >= MIN_DAYS[h] and len(df[df[target_col].notna()]) >= MIN_DAYS[h] * 5:
+                print(f"\n  🎉 {HORIZON_LABELS[h]}: 최소 거래일({MIN_DAYS[h]}일) 도달 → 최초 학습 진행")
+                full_train(df, state, targets=[h], force=True, silent=True)
+                boosters, scalers = _load_raw()
+            continue
 
         need, reason = state.need_full(h)
         if need:
@@ -355,8 +365,9 @@ def incremental_update(df, state):
             boosters, scalers = _load_raw()
             continue
 
-        new_df = df[df["date"].dt.strftime("%Y-%m-%d").isin(new_dates)]
-        valid  = new_df[new_df[target_col].notna()]
+        # 핵심 패치: 새 날짜(new_dates)의 주가가 들어오면서 타겟 수익률이 막 확정된 과거 행 추출
+        matured_df = df[df[target_date_col].isin(new_dates)]
+        valid = matured_df[matured_df[target_col].notna()]
         if valid.empty:
             continue
 
@@ -368,9 +379,9 @@ def incremental_update(df, state):
         incr.fit(Xs, y, init_model=boosters[h], callbacks=[lgb.log_evaluation(-1)])
         boosters[h] = incr.booster_
 
-        # Fix6: 최근 30일 MAE 모니터링
-        recent_val = df[df["date"] >= df["date"].max() - pd.Timedelta(days=30)]
-        recent_val = recent_val[recent_val[target_col].notna()]
+        # 최근 30일(타겟 확정분 기준) MAE 모니터링
+        valid_all = df[df[target_col].notna()]
+        recent_val = valid_all[valid_all["date"] >= valid_all["date"].max() - pd.Timedelta(days=30)]
         if not recent_val.empty:
             Xv = scalers[h].transform(recent_val[ALL_FEATURES].fillna(0))
             yv = recent_val[target_col].clip(-50, 50)
@@ -390,7 +401,8 @@ def incremental_update(df, state):
             print(f"  ✅ {HORIZON_LABELS[h]:8s}  +{INCR_TREES}트리 (총 {n_tr})")
 
     _save_raw(boosters, scalers)
-    state.mark(new_dates)
+    all_dates = df["date"].dt.strftime("%Y-%m-%d").unique().tolist()
+    state.mark(new_dates, valid_all_dates=all_dates)
     print(f"\n  ⏱  총 소요: {time.time()-t0:.1f}초")
 
 
@@ -445,7 +457,6 @@ def full_report(df, sort_by="T21"):
     report_path = "ai_prediction_report.csv"
     res.to_csv(report_path, index=False, encoding="utf-8-sig")
     
-# 모델 MAE 헤더
     maes = {h: state.hget(h).get("recent_mae") or state.hget(h).get("cv_mae")
             for h in HORIZONS if state.hget(h)}
 
@@ -531,7 +542,7 @@ def show_status(df):
     new    = state.new_dates(df)
 
     print(f"\n{'='*62}")
-    print(f"  📊 퀀트멘털 AI 시스템 현황 v4.0")
+    print(f"  📊 퀀트멘털 AI 시스템 현황 v4.1")
     print(f"{'='*62}")
     print(f"  기간: {dates[0].strftime('%Y-%m-%d')} ~ {dates[-1].strftime('%Y-%m-%d')}")
     print(f"  거래일: {n_days}일  /  종목: {df['ticker'].nunique()}개  /  전체 행: {len(df):,}")
@@ -562,7 +573,7 @@ def show_status(df):
 def interactive(df, state):
     """대화형 실행"""
     print(f"\n{'='*60}")
-    print(f"  🤖 퀀트멘털 AI v4.0 — 대화형 모드")
+    print(f"  🤖 퀀트멘털 AI v4.1 — 대화형 모드")
     print(f"{'='*60}")
 
     n_days = df["date"].nunique()
@@ -585,7 +596,7 @@ def interactive(df, state):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="퀀트멘털 AI v4.0")
+    parser = argparse.ArgumentParser(description="퀀트멘털 AI v4.1")
     parser.add_argument("--data",   default="data/nasdaq100data.csv")
     parser.add_argument("--mode",   choices=["status","train","update","report"],
                         default=None)
@@ -609,9 +620,13 @@ def main():
         show_status(df)
     elif args.mode == "train":
         full_train(df, state, force=args.force)
+        if models_exist():
+            full_report(df, sort_by=args.sort)
         print("\n다음 실행 시 증분 학습이 자동 적용됩니다.")
     elif args.mode == "update":
         incremental_update(df, state)
+        if models_exist():
+            full_report(df, sort_by=args.sort)
     elif args.mode == "report":
         full_report(df, sort_by=args.sort)
     else:
