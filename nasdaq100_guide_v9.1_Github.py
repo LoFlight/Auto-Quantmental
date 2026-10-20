@@ -1,7 +1,10 @@
 """
 =============================================================
-  퀀트멘털(Quantamental) v8.9.2 — 리얼타임 AI 뉴스 통합 엔진
-  [업데이트] 클로드 스타일 심층 마켓 브리핑 및 클라우드(GitHub) 저장 최적화
+  퀀트멘털(Quantamental) v8.9.3 — 리얼타임 AI 뉴스 통합 엔진 (GitHub용)
+  [업데이트] 
+  1. 클로드 스타일 심층 마켓 브리핑 및 클라우드(GitHub) 저장 최적화
+  2. 당일 수정종가(Adj Close) 결측 보정 및 지수-종목 날짜 무결성 검증
+  3. 동일 날짜 재실행 시 마스터 데이터 덮어쓰기(Upsert) 및 AI 모델 강제 복구 연동
 =============================================================
 """
 
@@ -98,53 +101,80 @@ def _safe_float(v, default=None):
         return default if (f != f) else f
     except: return default
 
-def _extract_ohlcv(raw, tkr, n_tickers):
+def _apply_safe_adjust(df):
+    """
+    auto_adjust=False로 받은 데이터에서 과거 배당/분할은 보정하되,
+    야후 정산 지연으로 최신 행의 Adj Close만 NaN인 경우 원본 Close를 유지해 당일 데이터 증발을 방지합니다.
+    """
     NEED = ["Open", "High", "Low", "Close", "Volume"]
+    if df is None or df.empty or "Close" not in df.columns:
+        return None
+    df = df.copy()
+    df = df.dropna(subset=["Close"])
+    if df.empty:
+        return None
+
+    if "Adj Close" in df.columns:
+        close_s = pd.to_numeric(df["Close"], errors="coerce")
+        adj_s = pd.to_numeric(df["Adj Close"], errors="coerce")
+        ratio = (adj_s / close_s.replace(0, np.nan)).ffill().fillna(1.0)
+        for col in ["Open", "High", "Low", "Close"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce") * ratio
+
+    cols = [c for c in NEED if c in df.columns]
+    return df[cols].dropna(subset=["Close"])
+
+def _extract_ohlcv(raw, tkr, n_tickers):
     try:
         if n_tickers == 1:
-            if isinstance(raw.columns, pd.MultiIndex):
-                try: return raw.xs(tkr, axis=1, level=1)[[c for c in NEED if c in raw.xs(tkr, axis=1, level=1).columns]].copy()
+            sub = raw.copy()
+            if isinstance(sub.columns, pd.MultiIndex):
+                try:
+                    sub = sub.xs(tkr, axis=1, level=1)
                 except:
-                    raw = raw.copy()
-                    raw.columns = raw.columns.get_level_values(0)
-            if "Close" in raw.columns: return raw[[c for c in NEED if c in raw.columns]].copy()
-            return None
+                    sub.columns = sub.columns.get_level_values(0)
+            return _apply_safe_adjust(sub)
 
-        if not isinstance(raw.columns, pd.MultiIndex): return None
+        if not isinstance(raw.columns, pd.MultiIndex):
+            return None
         try:
             sub = raw.xs(tkr, axis=1, level=1)
-            if "Close" in sub.columns: return sub[[c for c in NEED if c in sub.columns]].copy()
-        except: pass
+            if "Close" in sub.columns:
+                return _apply_safe_adjust(sub)
+        except:
+            pass
         try:
             sub = raw[tkr]
-            if isinstance(sub, pd.DataFrame) and "Close" in sub.columns: return sub[[c for c in NEED if c in sub.columns]].copy()
-        except: pass
+            if isinstance(sub, pd.DataFrame) and "Close" in sub.columns:
+                return _apply_safe_adjust(sub)
+        except:
+            pass
         return None
-    except Exception as e: 
+    except Exception:
         return None
 
 def fetch_price_batch(batch):
     stock_data = {}
     try:
-        raw = yf.download(batch, period="1y", auto_adjust=True, group_by="ticker", threads=False, progress=False)
+        raw = yf.download(batch, period="1y", auto_adjust=False, group_by="ticker", threads=False, progress=False)
         if raw is not None and not raw.empty:
             for tkr in batch:
                 df = _extract_ohlcv(raw, tkr, len(batch))
-                if df is not None:
-                    df = df.dropna(subset=["Close"])
-                    if len(df) >= 50: stock_data[tkr] = df
-    except Exception as e:
+                if df is not None and len(df) >= 50:
+                    stock_data[tkr] = df
+    except Exception:
         pass
     
     missed = [t for t in batch if t not in stock_data]
     for tkr in missed:
         try:
-            df = yf.Ticker(tkr).history(period="1y", auto_adjust=True)
-            if df is None or df.empty: continue
-            cols = [c for c in ["Open","High","Low","Close","Volume"] if c in df.columns]
-            df = df[cols].dropna(subset=["Close"])
-            if len(df) >= 50: stock_data[tkr] = df
-        except: pass
+            df = yf.Ticker(tkr).history(period="1y", auto_adjust=False)
+            df = _apply_safe_adjust(df)
+            if df is not None and len(df) >= 50:
+                stock_data[tkr] = df
+        except:
+            pass
         time.sleep(0.15)
     return stock_data
 
@@ -189,11 +219,15 @@ def fetch_market_env():
     env = {}
     for sym in ["QQQ", "^VIX", "SPY", "^IXIC", "^TNX"]:
         try:
-            df = yf.Ticker(sym).history(period="1y", auto_adjust=True)
+            df = yf.Ticker(sym).history(period="1y", auto_adjust=False)
             if not df.empty:
-                if isinstance(df.columns, pd.MultiIndex): df.columns = df.columns.get_level_values(0)
-                if "Close" in df.columns: env[sym] = df
-        except: pass
+                if isinstance(df.columns, pd.MultiIndex):
+                    df.columns = df.columns.get_level_values(0)
+                df = _apply_safe_adjust(df)
+                if df is not None and not df.empty:
+                    env[sym] = df
+        except:
+            pass
     return env
 
 def fetch_insider_and_gov(ticker_list):
@@ -797,9 +831,11 @@ def generate_report(results_df, market_env_data, market_date, top20_summaries=No
         if sym in market_env_data:
             df = market_env_data[sym]
             try:
-                cur = float(df["Close"].iloc[-1])
-                prev= float(df["Close"].iloc[-2]) if len(df)>1 else cur
-                chg = (cur/prev - 1)*100
+                s = df["Close"].dropna()
+                if s.empty: continue
+                cur = float(s.iloc[-1])
+                prev = float(s.iloc[-2]) if len(s) > 1 else cur
+                chg = (cur / prev - 1) * 100
                 cls = "up" if chg >= 0 else "down"
                 if sym == "^VIX": val_str = f"{cur:.2f} ({chg:+.2f}%)"
                 elif sym == "^TNX": val_str = f"{cur:.3f}% ({chg:+.2f}%)"
@@ -859,7 +895,6 @@ def generate_report(results_df, market_env_data, market_date, top20_summaries=No
 def run(tickers=None, output=None):
     if tickers is None: tickers = get_latest_nasdaq100()
     if output is None:
-        # 💡 다운로드 폴더가 아닌 reports 폴더에 자동 저장하도록 변경 (GitHub Actions 구조 유지)
         os.makedirs("reports", exist_ok=True)
         date_str = datetime.now().strftime("%Y%m%d_%H%M")
         output = f"reports/quantamental_report_{date_str}.html"
@@ -888,19 +923,40 @@ def run(tickers=None, output=None):
     market_env = fetch_market_env()
     env_score  = calc_market_env_score(market_env)
 
-    try:
-        if "QQQ" in market_env and not market_env["QQQ"].empty:
-            market_date = market_env["QQQ"].index[-1].strftime("%Y-%m-%d")
-        else:
-            market_date = datetime.now().strftime("%Y-%m-%d")
-    except:
+    # ── 실제 종목 데이터 기준일 산출 및 지수 기준일과 교차 검증 ──
+    stock_dates = [
+        df.index[-1].strftime("%Y-%m-%d")
+        for df in all_stock_data.values()
+        if df is not None and not df.empty
+    ]
+    if stock_dates:
+        market_date = pd.Series(stock_dates).mode().iloc[0]
+    elif "QQQ" in market_env and not market_env["QQQ"].empty:
+        market_date = market_env["QQQ"].index[-1].strftime("%Y-%m-%d")
+    else:
         market_date = datetime.now().strftime("%Y-%m-%d")
 
+    index_date = (
+        market_env["^IXIC"].index[-1].strftime("%Y-%m-%d")
+        if "^IXIC" in market_env and not market_env["^IXIC"].empty
+        else market_date
+    )
+    date_mismatch = (market_date != index_date)
+    if date_mismatch:
+        print(f"\n🚨 [치명적 경고] 지수 기준일({index_date})과 개별 종목 기준일({market_date})이 다릅니다!")
+        print("   야후 파이낸스 서버에서 아직 개별 종목의 당일 종가 정산이 끝나지 않았습니다.")
+        print("   시계열 데이터 오염을 막기 위해 오늘자 마스터 데이터 저장 및 AI 학습을 차단합니다.\n")
+
     all_scores = []
-    for tkr in all_stock_data.keys():
+    for tkr, df in all_stock_data.items():
         try:
-            tech = calc_technicals(all_stock_data[tkr])
-            if not tech: continue
+            tkr_date = df.index[-1].strftime("%Y-%m-%d")
+            if tkr_date != market_date:
+                print(f"  ⚠️ {tkr}: 종목 기준일({tkr_date})이 전체 기준일({market_date})과 달라 건너뜁니다.")
+                continue
+            tech = calc_technicals(df)
+            if not tech:
+                continue
             fund = all_fundamentals.get(tkr, {})
             insider = all_insider.get(tkr, None)
             score_row = calc_total_score(tkr, fund, tech, env_score, insider)
@@ -915,7 +971,7 @@ def run(tickers=None, output=None):
     results_df = pd.DataFrame(all_scores).sort_values("total", ascending=False).reset_index(drop=True)
     
     # ─────────────────────────────────────────────────────────
-    # AI 학습을 위한 시계열 누적 데이터 저장 (시장 날짜 기준)
+    # AI 학습을 위한 시계열 누적 데이터 저장 (무결성 검증 + Upsert 덮어쓰기)
     # ─────────────────────────────────────────────────────────
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
@@ -938,29 +994,31 @@ def run(tickers=None, output=None):
     ai_df.insert(2, 'us10y_yield', tnx_val)
     ai_df['signal'] = ai_df.apply(lambda r: determine_signal(r)[0], axis=1)
     
-    skip_save = False
-    try:
-        if os.path.exists(master_csv_path):
-            existing = pd.read_csv(master_csv_path, encoding="utf-8-sig")
-            if "date" in existing.columns:
-                existing["date"] = pd.to_datetime(existing["date"]).dt.strftime("%Y-%m-%d")
-                if market_date in existing["date"].values:
-                    skip_save = True
-                    
-        if not skip_save:
-            ai_df.to_csv(master_csv_path, mode='a' if os.path.exists(master_csv_path) else 'w', 
-                         header=not os.path.exists(master_csv_path), index=False, encoding="utf-8-sig")
+    is_overwrite = False
+    if not date_mismatch:
+        try:
+            if os.path.exists(master_csv_path):
+                existing = pd.read_csv(master_csv_path, encoding="utf-8-sig")
+                if "date" in existing.columns:
+                    existing["date"] = pd.to_datetime(existing["date"]).dt.strftime("%Y-%m-%d")
+                    if market_date in existing["date"].values:
+                        is_overwrite = True
+                        print(f"  🔄 기존 저장된 {market_date} 데이터를 최신 정상 데이터로 덮어씁니다(Upsert).")
+                    existing = existing[existing["date"] != market_date]
+                combined_csv = pd.concat([existing, ai_df], ignore_index=True)
+            else:
+                combined_csv = ai_df
+
+            combined_csv.to_csv(master_csv_path, index=False, encoding="utf-8-sig")
+            print(f"  💾 마스터 CSV 저장/갱신 완료 (기준일: {market_date}, 총 {len(combined_csv)}행)")
+
             try:
-                if os.path.exists(master_parquet_path):
-                    existing_pq = pd.read_parquet(master_parquet_path)
-                    combined_pq = pd.concat([existing_pq, ai_df], ignore_index=True)
-                    combined_pq.to_parquet(master_parquet_path, engine="pyarrow")
-                else:
-                    ai_df.to_parquet(master_parquet_path, engine="pyarrow")
-            except Exception as e:
-                pass
-    except Exception as e:
-        pass
+                combined_csv.to_parquet(master_parquet_path, engine="pyarrow", index=False)
+                print(f"  💾 마스터 Parquet 저장/갱신 완료 (기준일: {market_date})")
+            except Exception as pq_e:
+                print(f"  ⚠️ Parquet 저장 실패: {pq_e}")
+        except Exception as e:
+            print(f"  ⚠️ 마스터 데이터 저장 오류: {e}")
         
     # ── 🌟 실시간 최신 마켓 브리핑 엔진 (Claude 스타일 + JSON 프롬프팅) ──────────
     print("\n🌐 시장 전체 및 주요 종목 뉴스 수집 중 (RSS)...")
@@ -971,7 +1029,6 @@ def run(tickers=None, output=None):
     for tkr in target_tickers:
         try:
             url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={tkr}&region=US&lang=en-US"
-            # ⭐️ 깃허브 서버 IP 차단 우회를 위한 브라우저 헤더 위장
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
@@ -993,7 +1050,6 @@ def run(tickers=None, output=None):
             pass
         time.sleep(0.3)
 
-    # ⭐️ 야후에서 완전히 차단당해 뉴스를 못 가져왔을 때의 안전장치
     if not aggregated_news:
         print("⚠️ 주의: 통신 제한으로 뉴스를 가져오지 못했습니다. 기술적 지표 기반으로 브리핑을 대체합니다.")
         aggregated_news.append("[시장 알림] 현재 외부 뉴스 서버 접속 제한으로 세부 뉴스를 불러올 수 없습니다. 오늘 수집된 주요 기술적 분석 지표와 증시 전반의 흐름만으로 시황을 유추하여 브리핑을 작성하세요.")
@@ -1035,11 +1091,8 @@ def run(tickers=None, output=None):
 
     daily_briefing = {}
     try:
-        # ⭐️ 깃허브 Secrets에서 불러온 API 키 1개를 사용
         if GEMINI_API_KEYS:
             genai.configure(api_key=GEMINI_API_KEYS[0]) 
-            
-            # ⭐️ 하루 1,500회 무료인 최신 1.5 버전 사용 (한도 문제 해결)
             model = genai.GenerativeModel('gemini-2.5-flash')
             
             max_retries = 3
@@ -1082,9 +1135,9 @@ def run(tickers=None, output=None):
     try: results_df.to_csv(csv_path, index=False, encoding="utf-8-sig")
     except: pass
     
-# GitHub Pages 호스팅을 위해 index.html 복사
+    # GitHub Pages 호스팅을 위해 index.html 복사
     import shutil
-    import subprocess # 서브프로세스 모듈 추가
+    import subprocess
     
     try:
         shutil.copyfile(report_path, "index.html")
@@ -1093,14 +1146,20 @@ def run(tickers=None, output=None):
     
     print(f"\n✅ 완료! 리포트가 저장되었습니다: {report_path}")
 
-    # 🌟 AI 모델 증분 학습 자동 실행 추가
-    print("\n🤖 AI 모델 자동 증분 학습(Update)을 시작합니다...")
-    try:
-        # sys.executable을 사용해 현재 실행 중인 파이썬 환경에서 트레이너 스크립트 실행
-        subprocess.run([sys.executable, "ai_trainer_final.py", "--mode", "update"], check=True)
-        print("  ✅ AI 증분 학습 및 모델 저장 완료!")
-    except Exception as e:
-        print(f"  ⚠️ AI 학습 중 오류 발생: {e}")
+    # 🌟 AI 모델 학습 자동 실행 (데이터 오염 시 학습 차단 / 덮어쓰기 복구 시 강제 재학습)
+    if date_mismatch:
+        print("\n⛔ [AI 학습 보류] 지수와 종목 날짜가 불일치하므로 AI 모델 오염 방지를 위해 학습을 건너뜁니다.")
+    else:
+        try:
+            if is_overwrite:
+                print(f"\n🤖 [{market_date} 데이터 정정 감지] 오염 가능성을 제거하기 위해 AI 모델 전체 재학습(--mode train --force)을 시작합니다...")
+                subprocess.run([sys.executable, "ai_trainer_final.py", "--mode", "train", "--force"], check=True)
+            else:
+                print("\n🤖 AI 모델 자동 증분 학습(--mode update)을 시작합니다...")
+                subprocess.run([sys.executable, "ai_trainer_final.py", "--mode", "update"], check=True)
+            print("  ✅ AI 학습 및 모델 저장 완료!")
+        except Exception as e:
+            print(f"  ⚠️ AI 학습 중 오류 발생: {e}")
 
 if __name__ == "__main__":
     try:
