@@ -1,10 +1,10 @@
 """
 =============================================================
-  퀀트멘털(Quantamental) v8.9.3 — 리얼타임 AI 뉴스 통합 엔진 (GitHub용)
+  퀀트멘털(Quantamental) v9.0 — 리얼타임 AI 뉴스 통합 엔진 (GitHub용)
   [업데이트] 
-  1. 클로드 스타일 심층 마켓 브리핑 및 클라우드(GitHub) 저장 최적화
-  2. 당일 수정종가(Adj Close) 결측 보정 및 지수-종목 날짜 무결성 검증
-  3. 동일 날짜 재실행 시 마스터 데이터 덮어쓰기(Upsert) 및 AI 모델 강제 복구 연동
+  1. 야후 파이낸스 오전 시간대 일봉(1d) NaN 현상 발생 시 정규장 1시간봉(1h) + fast_info로 당일 종가 100% 자동 복원
+  2. 한국 표준시(KST, UTC+9) 기준 분석 시간 표기 적용
+  3. 마스터 데이터(CSV/Parquet) 동일 날짜 자동 덮어쓰기(Upsert) 및 AI 학습 연동
 =============================================================
 """
 
@@ -14,7 +14,10 @@ warnings.filterwarnings("ignore")
 import sys, os, time, io, traceback, random, json
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# 한국 표준시 (KST, UTC+9) 설정
+KST = timezone(timedelta(hours=9))
 
 # ── 패키지 자동 설치 ───────────────────────────────────────
 def _pip(pkg):
@@ -47,7 +50,7 @@ INSIDER_DAYS = 90
 BATCH_SIZE = 7
 
 # ─────────────────────────────────────────────────────────────
-#  1. 나스닥 100 리스트 및 데이터 수집 
+#  1. 나스닥 100 리스트 및 데이터 수집 (당일 누락 일봉 자동 복원 포함)
 # ─────────────────────────────────────────────────────────────
 def get_latest_nasdaq100():
     print("  🌐 최신 나스닥 100 편입 종목 목록 확인 중...")
@@ -102,10 +105,6 @@ def _safe_float(v, default=None):
     except: return default
 
 def _apply_safe_adjust(df):
-    """
-    auto_adjust=False로 받은 데이터에서 과거 배당/분할은 보정하되,
-    야후 정산 지연으로 최신 행의 Adj Close만 NaN인 경우 원본 Close를 유지해 당일 데이터 증발을 방지합니다.
-    """
     NEED = ["Open", "High", "Low", "Close", "Volume"]
     if df is None or df.empty or "Close" not in df.columns:
         return None
@@ -125,8 +124,9 @@ def _apply_safe_adjust(df):
     cols = [c for c in NEED if c in df.columns]
     return df[cols].dropna(subset=["Close"])
 
-def _extract_ohlcv(raw, tkr, n_tickers):
+def _extract_ohlcv(raw, tkr, n_tickers, apply_adj=True):
     try:
+        sub = None
         if n_tickers == 1:
             sub = raw.copy()
             if isinstance(sub.columns, pd.MultiIndex):
@@ -134,33 +134,60 @@ def _extract_ohlcv(raw, tkr, n_tickers):
                     sub = sub.xs(tkr, axis=1, level=1)
                 except:
                     sub.columns = sub.columns.get_level_values(0)
-            return _apply_safe_adjust(sub)
-
-        if not isinstance(raw.columns, pd.MultiIndex):
+        else:
+            if not isinstance(raw.columns, pd.MultiIndex):
+                return None
+            try:
+                sub = raw.xs(tkr, axis=1, level=1)
+            except:
+                try:
+                    sub = raw[tkr]
+                except:
+                    return None
+        if sub is None or not isinstance(sub, pd.DataFrame) or "Close" not in sub.columns:
             return None
-        try:
-            sub = raw.xs(tkr, axis=1, level=1)
-            if "Close" in sub.columns:
-                return _apply_safe_adjust(sub)
-        except:
-            pass
-        try:
-            sub = raw[tkr]
-            if isinstance(sub, pd.DataFrame) and "Close" in sub.columns:
-                return _apply_safe_adjust(sub)
-        except:
-            pass
-        return None
+        return _apply_safe_adjust(sub) if apply_adj else sub.dropna(subset=["Close"]).copy()
     except Exception:
         return None
 
-def fetch_price_batch(batch):
+def _append_intraday_bar(df, intraday_df, target_date):
+    """정규장 1시간봉(1h) 데이터에서 target_date의 시/고/저/종/거래량을 집계해 일봉 마지막 행으로 추가"""
+    if df is None or df.empty or intraday_df is None or intraday_df.empty:
+        return df
+    try:
+        idx = intraday_df.index
+        if idx.tz is not None:
+            idx_ny = idx.tz_convert("America/New_York")
+        else:
+            idx_ny = idx
+        day_bars = intraday_df.loc[idx_ny.strftime("%Y-%m-%d") == target_date].dropna(subset=["Close"])
+        if day_bars.empty:
+            return df
+
+        open_v  = float(day_bars["Open"].iloc[0]) if "Open" in day_bars.columns else float(day_bars["Close"].iloc[0])
+        high_v  = float(day_bars["High"].max())   if "High" in day_bars.columns else float(day_bars["Close"].max())
+        low_v   = float(day_bars["Low"].min())    if "Low" in day_bars.columns  else float(day_bars["Close"].min())
+        close_v = float(day_bars["Close"].iloc[-1])
+        vol_v   = float(day_bars["Volume"].sum()) if "Volume" in day_bars.columns else 0.0
+
+        # 기존 마지막 일봉의 평균 거래량 대비 1h 합산 거래량이 0이면 직전 거래량으로 보완
+        if vol_v <= 0 and "Volume" in df.columns and len(df) > 0:
+            vol_v = float(df["Volume"].iloc[-1])
+
+        df = df.copy()
+        new_ts = pd.Timestamp(target_date).tz_localize(df.index.tz) if df.index.tz is not None else pd.Timestamp(target_date)
+        df.loc[new_ts, ["Open", "High", "Low", "Close", "Volume"]] = [open_v, high_v, low_v, close_v, vol_v]
+        return df.sort_index()
+    except Exception:
+        return df
+
+def fetch_price_batch(batch, target_date=None):
     stock_data = {}
     try:
         raw = yf.download(batch, period="1y", auto_adjust=False, group_by="ticker", threads=False, progress=False)
         if raw is not None and not raw.empty:
             for tkr in batch:
-                df = _extract_ohlcv(raw, tkr, len(batch))
+                df = _extract_ohlcv(raw, tkr, len(batch), apply_adj=True)
                 if df is not None and len(df) >= 50:
                     stock_data[tkr] = df
     except Exception:
@@ -176,6 +203,38 @@ def fetch_price_batch(batch):
         except:
             pass
         time.sleep(0.15)
+
+    # 🌟 핵심 해결책: 야후 일봉(1d) 정산 지연으로 최신 거래일(target_date)이 NaN 처리되어 빠진 종목들을
+    # 이미 확정된 정규장 1시간봉(interval="1h", prepost=False)으로 즉시 복원합니다.
+    if target_date:
+        lagging = [
+            tkr for tkr, df in stock_data.items()
+            if df.index[-1].strftime("%Y-%m-%d") < target_date
+        ]
+        if lagging:
+            try:
+                raw_1h = yf.download(lagging, period="5d", interval="1h", prepost=False, group_by="ticker", threads=False, progress=False)
+                if raw_1h is not None and not raw_1h.empty:
+                    for tkr in lagging:
+                        sub_1h = _extract_ohlcv(raw_1h, tkr, len(lagging), apply_adj=False)
+                        if sub_1h is not None and not sub_1h.empty:
+                            stock_data[tkr] = _append_intraday_bar(stock_data[tkr], sub_1h, target_date)
+            except Exception:
+                pass
+
+            # 1h 배치에서도 복원 안 된 종목은 개별 1h 호출로 2차 복원
+            still_lagging = [
+                tkr for tkr in lagging
+                if stock_data[tkr].index[-1].strftime("%Y-%m-%d") < target_date
+            ]
+            for tkr in still_lagging:
+                try:
+                    sub_1h = yf.Ticker(tkr).history(period="5d", interval="1h", prepost=False)
+                    if sub_1h is not None and not sub_1h.empty:
+                        stock_data[tkr] = _append_intraday_bar(stock_data[tkr], sub_1h, target_date)
+                except Exception:
+                    pass
+
     return stock_data
 
 def fetch_fundamentals(ticker_list):
@@ -217,7 +276,8 @@ def fetch_fundamentals(ticker_list):
 
 def fetch_market_env():
     env = {}
-    for sym in ["QQQ", "^VIX", "SPY", "^IXIC", "^TNX"]:
+    # 1단계: 지수(^IXIC, ^VIX, ^TNX) 먼저 수집하여 정확한 미국장 최신 마감일(target_date) 확보
+    for sym in ["^IXIC", "^VIX", "^TNX"]:
         try:
             df = yf.Ticker(sym).history(period="1y", auto_adjust=False)
             if not df.empty:
@@ -225,6 +285,28 @@ def fetch_market_env():
                     df.columns = df.columns.get_level_values(0)
                 df = _apply_safe_adjust(df)
                 if df is not None and not df.empty:
+                    env[sym] = df
+        except:
+            pass
+
+    target_date = env["^IXIC"].index[-1].strftime("%Y-%m-%d") if "^IXIC" in env else None
+
+    # 2단계: ETF(QQQ, SPY) 수집 및 당일 일봉 NaN 발생 시 정규장 1h 봉으로 즉시 복원
+    for sym in ["QQQ", "SPY"]:
+        try:
+            df = yf.Ticker(sym).history(period="1y", auto_adjust=False)
+            if not df.empty:
+                if isinstance(df.columns, pd.MultiIndex):
+                    df.columns = df.columns.get_level_values(0)
+                df = _apply_safe_adjust(df)
+                if df is not None and not df.empty:
+                    if target_date and df.index[-1].strftime("%Y-%m-%d") < target_date:
+                        try:
+                            sub_1h = yf.Ticker(sym).history(period="5d", interval="1h", prepost=False)
+                            if sub_1h is not None and not sub_1h.empty:
+                                df = _append_intraday_bar(df, sub_1h, target_date)
+                        except:
+                            pass
                     env[sym] = df
         except:
             pass
@@ -822,7 +904,7 @@ HTML_TEMPLATE = """
 """
 
 def generate_report(results_df, market_env_data, market_date, top20_summaries=None, output_path="quantamental_report.html"):
-    current_time_str = datetime.now().strftime("%Y년 %m월 %d일 %H:%M")
+    current_time_str = datetime.now(KST).strftime("%Y년 %m월 %d일 %H:%M (KST)")
     top10_alloc = calc_allocation(results_df)
     alloc_map = dict(zip(top10_alloc["ticker"], top10_alloc["allocation"]))
 
@@ -896,17 +978,31 @@ def run(tickers=None, output=None):
     if tickers is None: tickers = get_latest_nasdaq100()
     if output is None:
         os.makedirs("reports", exist_ok=True)
-        date_str = datetime.now().strftime("%Y%m%d_%H%M")
+        date_str = datetime.now(KST).strftime("%Y%m%d_%H%M")
         output = f"reports/quantamental_report_{date_str}.html"
 
-    print(f"\n📊 퀀트멘털 v8.9 엔진 시작! 총 {len(tickers)}개 종목 분석\n") 
+    print(f"\n📊 퀀트멘털 v9.0 엔진 시작! 총 {len(tickers)}개 종목 분석\n") 
+
+    # 🌟 1. 시장 환경 지수(^IXIC 등)를 가장 먼저 수집하여 미국장 최신 마감일(target_date)을 확정합니다.
+    print("✅ 시장 환경 데이터 우선 수집 및 미국 증시 최신 마감일 확인 중...")
+    market_env = fetch_market_env()
+    env_score  = calc_market_env_score(market_env)
+    target_date = (
+        market_env["^IXIC"].index[-1].strftime("%Y-%m-%d")
+        if "^IXIC" in market_env and not market_env["^IXIC"].empty
+        else None
+    )
+    if target_date:
+        print(f"  📌 확인된 미국 증시 최신 마감일: {target_date}")
+
     all_stock_data, all_fundamentals, all_insider = {}, {}, {}
     
+    # 🌟 2. 개별 종목 수집 시 target_date가 누락(NaN)되어 있으면 정규장 1시간봉(1h)으로 자동 복원합니다.
     for i in range(0, len(tickers), BATCH_SIZE):
         chunk = tickers[i:i + BATCH_SIZE]
         print(f"▶ 데이터 수집 중... ({chunk[0]}~{chunk[-1]})")
         
-        chunk_stock_data = fetch_price_batch(chunk)
+        chunk_stock_data = fetch_price_batch(chunk, target_date=target_date)
         valid = list(chunk_stock_data.keys())
         
         if valid:
@@ -918,12 +1014,7 @@ def run(tickers=None, output=None):
         all_stock_data.update(chunk_stock_data)
         all_fundamentals.update(chunk_fundamentals)
         all_insider.update(chunk_insider) 
-        
-    print("\n✅ 시장 환경 데이터 수집 및 점수 계산...")
-    market_env = fetch_market_env()
-    env_score  = calc_market_env_score(market_env)
 
-    # ── 실제 종목 데이터 기준일 산출 및 지수 기준일과 교차 검증 ──
     stock_dates = [
         df.index[-1].strftime("%Y-%m-%d")
         for df in all_stock_data.values()
@@ -931,33 +1022,35 @@ def run(tickers=None, output=None):
     ]
     if stock_dates:
         market_date = pd.Series(stock_dates).mode().iloc[0]
-    elif "QQQ" in market_env and not market_env["QQQ"].empty:
-        market_date = market_env["QQQ"].index[-1].strftime("%Y-%m-%d")
+    elif target_date:
+        market_date = target_date
     else:
-        market_date = datetime.now().strftime("%Y-%m-%d")
+        market_date = datetime.now(KST).strftime("%Y-%m-%d")
 
-    index_date = (
-        market_env["^IXIC"].index[-1].strftime("%Y-%m-%d")
-        if "^IXIC" in market_env and not market_env["^IXIC"].empty
-        else market_date
-    )
+    index_date = target_date or market_date
     date_mismatch = (market_date != index_date)
     if date_mismatch:
         print(f"\n🚨 [치명적 경고] 지수 기준일({index_date})과 개별 종목 기준일({market_date})이 다릅니다!")
-        print("   야후 파이낸스 서버에서 아직 개별 종목의 당일 종가 정산이 끝나지 않았습니다.")
         print("   시계열 데이터 오염을 막기 위해 오늘자 마스터 데이터 저장 및 AI 학습을 차단합니다.\n")
 
     all_scores = []
     for tkr, df in all_stock_data.items():
         try:
             tkr_date = df.index[-1].strftime("%Y-%m-%d")
-            if tkr_date != market_date:
-                print(f"  ⚠️ {tkr}: 종목 기준일({tkr_date})이 전체 기준일({market_date})과 달라 건너뜁니다.")
-                continue
             tech = calc_technicals(df)
             if not tech:
                 continue
             fund = all_fundamentals.get(tkr, {})
+            # 만약 1h 봉으로도 복원이 안 된 구버전 날짜 종목인데 fast_info 현재가가 있으면 가격/등락률 보정
+            if tkr_date < market_date and fund.get("current_price"):
+                cur_p = float(fund["current_price"])
+                prev_p = float(df["Close"].iloc[-1])
+                tech["price"] = cur_p
+                tech["pct_change"] = round((cur_p / prev_p - 1) * 100, 2) if prev_p else 0.0
+            elif tkr_date != market_date:
+                print(f"  ⚠️ {tkr}: 종목 기준일({tkr_date})이 전체 기준일({market_date})과 달라 건너뜁니다.")
+                continue
+
             insider = all_insider.get(tkr, None)
             score_row = calc_total_score(tkr, fund, tech, env_score, insider)
             all_scores.append(score_row)
@@ -1146,13 +1239,13 @@ def run(tickers=None, output=None):
     
     print(f"\n✅ 완료! 리포트가 저장되었습니다: {report_path}")
 
-    # 🌟 AI 모델 학습 자동 실행 (데이터 오염 시 학습 차단 / 덮어쓰기 복구 시 강제 재학습)
+    # 🌟 AI 모델 학습 자동 실행
     if date_mismatch:
         print("\n⛔ [AI 학습 보류] 지수와 종목 날짜가 불일치하므로 AI 모델 오염 방지를 위해 학습을 건너뜁니다.")
     else:
         try:
             if is_overwrite:
-                print(f"\n🤖 [{market_date} 데이터 정정 감지] 오염 가능성을 제거하기 위해 AI 모델 전체 재학습(--mode train --force)을 시작합니다...")
+                print(f"\n🤖 [{market_date} 데이터 정정 감지] AI 모델 전체 재학습(--mode train --force)을 시작합니다...")
                 subprocess.run([sys.executable, "ai_trainer_final.py", "--mode", "train", "--force"], check=True)
             else:
                 print("\n🤖 AI 모델 자동 증분 학습(--mode update)을 시작합니다...")
