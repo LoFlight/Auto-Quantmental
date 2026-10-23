@@ -100,16 +100,17 @@
     "2026-10-16",
     "2026-10-19",
     "2026-10-20",
-    "2026-10-21"
+    "2026-10-21",
+    "2026-10-22"
   ],
   "horizons": {
     "T1": {
       "trained_at": "2026-10-20T05:53:21.744555",
       "n_samples": 9839,
       "cv_mae": 2.0823,
-      "recent_mae": 1.811,
+      "recent_mae": 2.0724,
       "best_iter": 92,
-      "total_trees": 152,
+      "total_trees": 182,
       "is_initial": false,
       "label": "다음날",
       "top3": [
@@ -117,15 +118,15 @@
         "macd_hist",
         "price_to_ma120"
       ],
-      "last_update": "2026-10-22T07:19:18.620726"
+      "last_update": "2026-10-23T00:00:38.082179"
     },
     "T5": {
       "trained_at": "2026-10-20T05:53:22.182358",
       "n_samples": 9415,
       "cv_mae": 4.7435,
-      "recent_mae": 4.5643,
+      "recent_mae": 4.8814,
       "best_iter": 43,
-      "total_trees": 103,
+      "total_trees": 133,
       "is_initial": false,
       "label": "1주 후",
       "top3": [
@@ -133,15 +134,15 @@
         "bb_width",
         "market_breadth"
       ],
-      "last_update": "2026-10-22T07:19:18.645796"
+      "last_update": "2026-10-23T00:00:38.106587"
     },
     "T21": {
       "trained_at": "2026-10-20T05:53:22.535024",
       "n_samples": 7724,
       "cv_mae": 8.9433,
-      "recent_mae": 8.9137,
+      "recent_mae": 9.2916,
       "best_iter": 22,
-      "total_trees": 82,
+      "total_trees": 112,
       "is_initial": false,
       "label": "1개월 후",
       "top3": [
@@ -149,15 +150,15 @@
         "p1_p2_ratio",
         "bb_width"
       ],
-      "last_update": "2026-10-22T07:19:18.667589"
+      "last_update": "2026-10-23T00:00:38.127466"
     },
     "T63": {
       "trained_at": "2026-10-20T05:53:22.779923",
       "n_samples": 3491,
       "cv_mae": 12.7154,
-      "recent_mae": 11.0497,
+      "recent_mae": 10.8897,
       "best_iter": 19,
-      "total_trees": 79,
+      "total_trees": 109,
       "is_initial": false,
       "label": "3개월 후",
       "top3": [
@@ -165,7 +166,7 @@
         "price_to_ma120",
         "p1"
       ],
-      "last_update": "2026-10-22T07:19:18.689388"
+      "last_update": "2026-10-23T00:00:38.147468"
     }
   },
   "last_full": {
