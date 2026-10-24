@@ -55,25 +55,58 @@ BATCH_SIZE = 7
 def get_latest_nasdaq100():
     print("  🌐 최신 나스닥 100 편입 종목 목록 확인 중...")
     tickers = []
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+    }
+
+    # 1순위: 위키피디아 (분리된 전용 문서 우선 탐색 + 기존 문서 백업 탐색)
+    wiki_urls = [
+        "https://en.wikipedia.org/wiki/List_of_NASDAQ-100_companies",
+        "https://en.wikipedia.org/wiki/Nasdaq-100"
+    ]
+    for url in wiki_urls:
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            html_data = urllib.request.urlopen(req, timeout=10).read().decode('utf-8')
+            tables = pd.read_html(io.StringIO(html_data))
+            for table in tables:
+                for col in ['Ticker', 'Symbol']:
+                    if col in table.columns and len(table) >= 95:
+                        tickers = [
+                            str(t).strip().replace('.', '-')
+                            for t in table[col].dropna().tolist()
+                            if str(t).strip()
+                        ]
+                        break
+                if len(tickers) >= 95:
+                    break
+            if len(tickers) >= 95:
+                print(f"  ✅ 위키피디아에서 최신 종목 {len(tickers)}개 업데이트 완료! ({url.split('/')[-1]})")
+                return tickers
+        except Exception as e:
+            print(f"  ⚠️ 위키피디아({url.split('/')[-1]}) 크롤링 실패: {e}")
+
+    # 2순위: Slickcharts 웹 백업 (위키피디아 구조 변경·차단 시 구버전 로컬 파일로 넘어가는 현상 방지)
     try:
-        req = urllib.request.Request(
-            "https://en.wikipedia.org/wiki/Nasdaq-100", 
-            headers={'User-Agent': 'Mozilla/5.0'}
-        )
+        req = urllib.request.Request("https://www.slickcharts.com/nasdaq100", headers=headers)
         html_data = urllib.request.urlopen(req, timeout=10).read().decode('utf-8')
         tables = pd.read_html(io.StringIO(html_data))
         for table in tables:
-            if 'Ticker' in table.columns:
-                tickers = [str(t).replace('.', '-') for t in table['Ticker'].tolist()]
+            if 'Symbol' in table.columns and len(table) >= 95:
+                tickers = [
+                    str(t).strip().replace('.', '-')
+                    for t in table['Symbol'].dropna().tolist()
+                    if str(t).strip()
+                ]
                 break
+        if len(tickers) >= 95:
+            print(f"  ✅ Slickcharts에서 최신 종목 {len(tickers)}개 업데이트 완료!")
+            return tickers
     except Exception as e:
-        print(f"  ⚠️ 위키피디아 크롤링 실패: {e}")
-    
-    if tickers:
-        print(f"  ✅ 최신 종목 {len(tickers)}개 업데이트 완료!")
-        return tickers
-        
-    print("  📂 웹 크롤링 실패. 누적된 데이터 장부에서 최근 종목을 추출합니다.")
+        print(f"  ⚠️ Slickcharts 크롤링 실패: {e}")
+
+    # 3순위: 모든 웹 크롤링 실패 시에만 로컬 장부 백업 사용
+    print("  📂 웹 크롤링 모두 실패. 누적된 데이터 장부에서 최근 종목을 추출합니다.")
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
         parquet_path = os.path.join(script_dir, "data", "nasdaq100data.parquet")
@@ -188,7 +221,7 @@ def fetch_price_batch(batch, target_date=None):
         if raw is not None and not raw.empty:
             for tkr in batch:
                 df = _extract_ohlcv(raw, tkr, len(batch), apply_adj=True)
-                if df is not None and len(df) >= 50:
+                if df is not None and len(df) >= 15:
                     stock_data[tkr] = df
     except Exception:
         pass
@@ -353,7 +386,7 @@ def _bb_bands(s, period=20, n_std=2):
 def calc_technicals(df):
     try:
         close, vol = _to_series(df, "Close"), _to_series(df, "Volume")
-        if len(close) < 50: return None
+        if len(close) < 15: return None  # 14일 RSI 계산 가능 시점부터 허용
         tech, price = {}, float(close.iloc[-1])
         tech["price"] = price
 
@@ -375,8 +408,9 @@ def calc_technicals(df):
         tech["pct_change"] = round((price / prev - 1) * 100, 2) if prev else 0.0
         tech["ret_60d"] = round((price / float(close.iloc[-60]) - 1) * 100, 2) if len(close) >= 60 else 0.0
 
-        mas = [tech.get(f"ma{n}") for n in [20, 60, 120, 200]]
-        tech["is_uptrend"] = all(a is not None and b is not None and a > b for a, b in zip(mas, mas[1:]))
+        # 상장 200일 미만 종목(SPCX 등)도 생성된 이평선(예: ma20, ma60)이 2개 이상이면 정배열 판정 가능하도록 개선
+        avail_mas = [tech.get(f"ma{n}") for n in [20, 60, 120, 200] if tech.get(f"ma{n}") is not None]
+        tech["is_uptrend"] = len(avail_mas) >= 2 and all(a > b for a, b in zip(avail_mas, avail_mas[1:]))
         return tech
     except Exception as e:
         return None
@@ -558,14 +592,16 @@ def score_sentiment(fund, tech):
 
 def score_technical(tech):
     score = 8.0
-    price, ma60, ma200 = tech.get("price", 0), tech.get("ma60"), tech.get("ma200")
+    price, ma60 = tech.get("price", 0), tech.get("ma60")
+    # 200일선이 아직 없는 신규 상장주는 120일선 또는 60일선을 장기 추세 기준선으로 활용
+    long_ma = tech.get("ma200") or tech.get("ma120") or ma60
     rsi, macd_diff, vr = tech.get("rsi", 50), tech.get("macd_diff", 0), tech.get("vol_ratio", 1.0)
     bb_lower, bb_upper, pct = tech.get("bb_lower"), tech.get("bb_upper"), tech.get("pct_change", 0)
 
-    if ma200 and price < ma200 * 0.97 and pct < -4 and vr > 2.0: return 0.0, True
+    if long_ma and price < long_ma * 0.97 and pct < -4 and vr > 2.0: return 0.0, True
 
-    if ma200:
-        ratio = price / ma200
+    if long_ma:
+        ratio = price / long_ma
         if ratio > 1.10: score += 4.0
         elif ratio > 1.03: score += 2.0
         elif ratio > 0.97: score += 0.0
