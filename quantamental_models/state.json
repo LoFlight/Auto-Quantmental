@@ -115,32 +115,32 @@
     "2026-11-06",
     "2026-11-09",
     "2026-11-10",
-    "2026-11-11"
+    "2026-11-11",
+    "2026-11-12"
   ],
   "horizons": {
     "T1": {
-      "trained_at": "2026-11-06T01:33:29.519917",
-      "n_samples": 11143,
-      "cv_mae": 2.1432,
-      "recent_mae": 2.815,
-      "best_iter": 107,
-      "total_trees": 197,
+      "trained_at": "2026-11-13T01:50:16.391319",
+      "n_samples": 11648,
+      "cv_mae": 2.1417,
+      "recent_mae": 2.1417,
+      "best_iter": 215,
+      "total_trees": 215,
       "is_initial": false,
       "label": "다음날",
       "top3": [
         "market_breadth",
         "price_to_ma120",
-        "bb_width"
-      ],
-      "last_update": "2026-11-12T02:17:38.558991"
+        "macd_hist"
+      ]
     },
     "T5": {
       "trained_at": "2026-11-07T00:56:07.612430",
       "n_samples": 10808,
       "cv_mae": 4.9385,
-      "recent_mae": 6.0347,
+      "recent_mae": 6.1385,
       "best_iter": 60,
-      "total_trees": 150,
+      "total_trees": 180,
       "is_initial": false,
       "label": "1주 후",
       "top3": [
@@ -148,15 +148,15 @@
         "price_to_ma120",
         "market_breadth"
       ],
-      "last_update": "2026-11-12T02:17:38.579032"
+      "last_update": "2026-11-13T01:50:16.427082"
     },
     "T21": {
       "trained_at": "2026-10-24T02:00:47.941587",
       "n_samples": 8119,
       "cv_mae": 8.9576,
-      "recent_mae": 9.853,
+      "recent_mae": 9.5562,
       "best_iter": 24,
-      "total_trees": 414,
+      "total_trees": 444,
       "is_initial": false,
       "label": "1개월 후",
       "top3": [
@@ -164,15 +164,15 @@
         "p1_p2_ratio",
         "bb_width"
       ],
-      "last_update": "2026-11-12T02:17:38.601253"
+      "last_update": "2026-11-13T01:50:16.445829"
     },
     "T63": {
       "trained_at": "2026-10-24T02:00:48.093687",
       "n_samples": 3886,
       "cv_mae": 12.692,
-      "recent_mae": 12.0867,
+      "recent_mae": 11.8386,
       "best_iter": 21,
-      "total_trees": 411,
+      "total_trees": 441,
       "is_initial": false,
       "label": "3개월 후",
       "top3": [
@@ -180,12 +180,12 @@
         "price_to_ma120",
         "p1"
       ],
-      "last_update": "2026-11-12T02:17:38.623291"
+      "last_update": "2026-11-13T01:50:16.463681"
     }
   },
   "last_full": {
     "T1,T5,T21,T63,T126,T252": "2026-10-24T02:00:48.104072",
-    "T1": "2026-11-06T01:33:29.535365",
+    "T1": "2026-11-13T01:50:16.403902",
     "T5": "2026-11-07T00:56:07.629396",
     "T21": "2026-08-31T23:24:43.189759"
   }
