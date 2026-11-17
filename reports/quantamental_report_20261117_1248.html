@@ -1,0 +1,2125 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>퀀트멘털 v8.9 일일 리포트 — 2026-11-16</title>
+<style>
+  :root { --blue: #2563eb; --green: #16a34a; --red: #dc2626; --yellow: #d97706; --gray: #64748b; --bg: #f8fafc; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif; background: var(--bg); color: #1e293b; font-size: 13px; }
+  .header { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #2563eb 100%); color: #fff; padding: 28px 32px 20px; }
+  .header-sub  { font-size: 10px; letter-spacing: 2px; opacity: .6; margin-bottom: 6px; }
+  .header-title{ font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+  .header-meta { font-size: 12px; opacity: .75; }
+  .header-stats{ display:flex; gap:24px; margin-top:14px; }
+  .stat-box { background: rgba(255,255,255,.1); border-radius:8px; padding: 8px 16px; text-align:center; }
+  .stat-val { font-size:18px; font-weight:800; }
+  .stat-lbl { font-size:10px; opacity:.7; margin-top:2px; }
+  .market-bar { background: #1e293b; color: #e2e8f0; padding: 10px 32px; display:flex; gap:24px; flex-wrap:wrap; font-size: 12px; }
+  .mkt-item { display:flex; flex-direction:column; align-items:center; }
+  .mkt-name { font-size:10px; color:#94a3b8; }
+  .mkt-val  { font-weight:700; font-size:13px; }
+  .up   { color: #4ade80; }
+  .down { color: #f87171; }
+  .section { padding: 20px 32px; }
+  .sec-title { font-size:16px; font-weight:800; margin-bottom:14px; border-left: 4px solid var(--blue); padding-left: 10px; }
+  
+  /* 테이블 디자인 */
+  .rank-table { width:100%; border-collapse:collapse; }
+  .rank-table th { background: #1e293b; color: #e2e8f0; padding: 9px 8px; text-align:center; font-size:11px; font-weight:700; white-space:nowrap; }
+  .rank-table td { padding: 8px 8px; text-align:center; border-bottom: 1px solid #e2e8f0; font-size:12px; white-space:nowrap; }
+  .rank-table tr:hover td { background: #eff6ff; }
+  .rank-num  { font-weight:800; font-size:15px; color: var(--blue); }
+  .ticker    { font-weight:800; font-size:13px; }
+  .total-score{ font-weight:800; font-size:14px; }
+  .score-bar { height:6px; border-radius:3px; margin:2px auto; background: linear-gradient(90deg, #3b82f6, #8b5cf6); }
+  .alloc-badge { background: #eff6ff; border: 1px solid #bfdbfe; border-radius:6px; padding:2px 8px; font-weight:700; color: var(--blue); font-size:12px; }
+  .sig-apex        { background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; border-radius:20px; padding:3px 10px; font-weight:800; font-size:11px; }
+  .sig-strong-buy  { background:#dcfce7; color:#166534; border:1px solid #86efac; border-radius:20px; padding:3px 10px; font-weight:700; font-size:11px; }
+  .sig-buy         { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; border-radius:20px; padding:3px 10px; font-weight:700; font-size:11px; }
+  .sig-hold        { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:20px; padding:3px 10px; font-weight:700; font-size:11px; }
+  .sig-partial     { background:#fffbeb; color:#92400e; border:1px solid #fde68a; border-radius:20px; padding:3px 10px; font-weight:700; font-size:11px; }
+  .sig-sell        { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; border-radius:20px; padding:3px 10px; font-weight:700; font-size:11px; }
+  .sig-strong-sell { background:#7f1d1d; color:#fee2e2; border:1px solid #dc2626; border-radius:20px; padding:3px 10px; font-weight:700; font-size:11px; }
+  .sig-weak        { background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; border-radius:20px; padding:3px 10px; font-weight:700; font-size:11px; }
+  .alert-box { background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:14px 18px; margin-bottom:16px; }
+  .alert-title { font-weight:800; color:#dc2626; margin-bottom:6px; font-size:14px; }
+  .alert-item { font-size:12px; color:#7f1d1d; line-height:1.8; }
+  .buy-box { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:14px 18px; margin-bottom:16px; }
+  .buy-title { font-weight:800; color:#16a34a; margin-bottom:6px; font-size:14px; }
+  
+  /* 클로드 스타일 브리핑 패널 CSS */
+  .panel{background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.05);}
+  .ph{padding:14px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;}
+  .pt{font-size:13px;font-weight:800;letter-spacing:0.05em;color:#1e293b;}
+  .pb-badge {font-size:10px;padding:3px 8px;border-radius:12px;font-weight:700;}
+  .pb-cyan {color:#0369a1;background:#e0f2fe;border:1px solid #bae6fd;}
+  .pb-amber {color:#b45309;background:#fef3c7;border:1px solid #fde68a;}
+  .hero-box {background: linear-gradient(145deg, #0f172a 0%, #1e3a5f 100%); color: #e2e8f0; padding: 24px 32px; border-radius: 8px; border-left: 4px solid var(--blue); margin-bottom: 24px;}
+  .hero-title {font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 12px; line-height: 1.3;}
+  .tl-item{display:grid;grid-template-columns:88px 1fr;gap:16px;padding:16px 20px;border-bottom:1px solid #e2e8f0;}
+  .tl-item:last-child{border-bottom:none;}
+  .tl-date{font-size:12px;font-weight:800;color:#64748b;}
+  .tl-head{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px;}
+  .mn-item{display:grid;grid-template-columns:60px 1fr;gap:16px;padding:16px 20px;border-bottom:1px solid #e2e8f0;}
+  .mn-tick{font-size:13px;font-weight:800;color:#2563eb;}
+  .exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+  .exp-item{padding:20px;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;}
+  .exp-item:nth-child(2n){border-right:none;}
+  .exp-name{font-size:12px;font-weight:800;color:#0f172a;margin-bottom:8px;}
+  .beg-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;padding:20px;}
+  .beg-head{font-size:12px;font-weight:800;color:#2563eb;margin-bottom:8px;}
+  .pos {color:#16a34a;font-weight:700;}
+  .neg {color:#dc2626;font-weight:700;}
+
+  .footer { background:#1e293b; color:#94a3b8; text-align:center; padding:16px; font-size:11px; line-height:1.8; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-sub">QUANTAMENTAL v8.9 · REAL-TIME AI ENGINE · NASDAQ 100</div>
+  <div class="header-title">📊 퀀트멘털 일일 리포트</div>
+  <div class="header-meta">분석 완료: 2026년 11월 17일 12:50 (KST)<br>데이터 기준일 (미국 증시 종가): <strong style="color:#dcfce7">2026-11-16</strong> · 분석 종목: 101개</div>
+  <div class="header-stats">
+    <div class="stat-box"><div class="stat-val">0</div><div class="stat-lbl">강력매수</div></div>
+    <div class="stat-box"><div class="stat-val">24</div><div class="stat-lbl">매수</div></div>
+    <div class="stat-box"><div class="stat-val">7</div><div class="stat-lbl">매도/청산</div></div>
+    <div class="stat-box"><div class="stat-val">64.0</div><div class="stat-lbl">평균점수</div></div>
+  </div>
+</div>
+<div class="market-bar">
+  
+  <div class="mkt-item"><span class="mkt-name">QQQ</span><span class="mkt-val down">$661.75 (-2.67%)</span></div>
+  
+  <div class="mkt-item"><span class="mkt-name">VIX</span><span class="mkt-val up">22.91 (+18.70%)</span></div>
+  
+  <div class="mkt-item"><span class="mkt-name">SPY</span><span class="mkt-val down">$739.95 (-1.91%)</span></div>
+  
+  <div class="mkt-item"><span class="mkt-name">NASDAQ</span><span class="mkt-val down">$24,509.76 (-2.49%)</span></div>
+  
+  <div class="mkt-item"><span class="mkt-name">US 10Y</span><span class="mkt-val down">5.121% (-0.64%)</span></div>
+  
+</div>
+
+
+<div class="section"><div class="alert-box"><div class="alert-title">⚠️ 매도 / 청산 긴급 신호</div>
+<div class="alert-item">🔴 TTWO (Take-Two Intera) — 총점 48.0점 / 🔴 전량 손절</div><div class="alert-item">🔴 CRWV (CoreWeave, Inc.) — 총점 45.5점 / 🔴 전량 손절</div><div class="alert-item">🔴 RKLB (Rocket Lab Corp) — 총점 44.0점 / 🔴 전량 손절</div>
+</div></div>
+
+
+
+<div class="section" style="padding-top:0"><div class="buy-box"><div class="buy-title">💰 오늘의 매수 추천 (자금 배분 포함)</div>
+<div class="alert-item">[ 1위] MSFT   총점 82.0점 → 배분 <strong>$12.2</strong> / 🟢 매수</div><div class="alert-item">[ 2위] REGN   총점 80.5점 → 배분 <strong>$10.4</strong> / 🟢 매수</div><div class="alert-item">[ 3위] TXN    총점 80.5점 → 배분 <strong>$8.7</strong> / 🟢 매수</div><div class="alert-item">[ 4위] MPWR   총점 80.5점 → 배분 <strong>$7.1</strong> / 🟢 매수</div><div class="alert-item">[ 5위] META   총점 80.0점 → 배분 <strong>$5.7</strong> / 🟢 매수</div><div class="alert-item">[ 6위] NXPI   총점 79.5점 → 배분 <strong>$4.3</strong> / 🟢 매수</div><div class="alert-item">[ 7위] AMD    총점 79.0점 → 배분 <strong>$3.1</strong> / 🟢 매수</div><div class="alert-item">[ 8위] ADSK   총점 79.0점 → 배분 <strong>$2.0</strong> / 🟢 매수</div><div class="alert-item">[ 9위] SHOP   총점 77.5점 → 배분 <strong>$1.1</strong> / 🟢 매수</div><div class="alert-item">[10위] WDAY   총점 77.0점 → 배분 <strong>$0.4</strong> / 🟢 매수</div>
+</div></div>
+
+
+<div class="section" style="padding-top:0">
+  <div class="sec-title">📋 나스닥 100 퀀트멘털 전체 순위</div>
+  <div style="overflow-x:auto">
+  <table class="rank-table">
+    <thead>
+      <tr>
+        <th>순위</th><th>종목</th><th>현재가</th><th>등락률</th><th>종합점수</th>
+        <th title="펀더멘털">①기본</th><th title="매크로">②매크로</th><th title="센티먼트">③심리</th>
+        <th title="시장환경">④시장</th><th title="기술적">⑤기술</th><th title="내부자">⑥내부자</th>
+        <th>RSI</th><th>거래량비율</th><th>배분금액</th><th>신호</th>
+      </tr>
+    </thead>
+    <tbody>
+    
+      <tr>
+        <td><span class="rank-num">1</span></td>
+        <td><div class="ticker">MSFT</div><div style="font-size:10px;color:#64748b">Microsoft Corpo</div></td>
+        <td>$517.99</td>
+        <td class="down">-1.12%</td>
+        <td><span class="total-score" style="color:#22c55e">82.0</span><div class="score-bar" style="width:59px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>16.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>15.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">46</td>
+        <td class="">1.1x</td>
+        <td><span class="alloc-badge">$12.2</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">2</span></td>
+        <td><div class="ticker">REGN</div><div style="font-size:10px;color:#64748b">Regeneron Pharm</div></td>
+        <td>$952.40</td>
+        <td class="down">-0.32%</td>
+        <td><span class="total-score" style="color:#22c55e">80.5</span><div class="score-bar" style="width:58px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>14.0<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>15.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">67</td>
+        <td class="">0.7x</td>
+        <td><span class="alloc-badge">$10.4</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">3</span></td>
+        <td><div class="ticker">TXN</div><div style="font-size:10px;color:#64748b">Texas Instrumen</div></td>
+        <td>$294.21</td>
+        <td class="down">-3.09%</td>
+        <td><span class="total-score" style="color:#22c55e">80.5</span><div class="score-bar" style="width:58px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>19.0<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>10.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">50</td>
+        <td class="">0.7x</td>
+        <td><span class="alloc-badge">$8.7</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">4</span></td>
+        <td><div class="ticker">MPWR</div><div style="font-size:10px;color:#64748b">Monolithic Powe</div></td>
+        <td>$1314.00</td>
+        <td class="down">-5.50%</td>
+        <td><span class="total-score" style="color:#22c55e">80.5</span><div class="score-bar" style="width:58px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>12.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">51</td>
+        <td class="">0.8x</td>
+        <td><span class="alloc-badge">$7.1</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">5</span></td>
+        <td><div class="ticker">META</div><div style="font-size:10px;color:#64748b">Meta Platforms,</div></td>
+        <td>$626.41</td>
+        <td class="down">-2.38%</td>
+        <td><span class="total-score" style="color:#22c55e">80.0</span><div class="score-bar" style="width:58px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>20.5<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>8.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">44</td>
+        <td class="">0.5x</td>
+        <td><span class="alloc-badge">$5.7</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">6</span></td>
+        <td><div class="ticker">NXPI</div><div style="font-size:10px;color:#64748b">NXP Semiconduct</div></td>
+        <td>$254.19</td>
+        <td class="down">-4.11%</td>
+        <td><span class="total-score" style="color:#22c55e">79.5</span><div class="score-bar" style="width:57px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>11.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">52</td>
+        <td class="">0.8x</td>
+        <td><span class="alloc-badge">$4.3</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">7</span></td>
+        <td><div class="ticker">AMD</div><div style="font-size:10px;color:#64748b">Advanced Micro </div></td>
+        <td>$504.28</td>
+        <td class="down">-5.58%</td>
+        <td><span class="total-score" style="color:#22c55e">79.0</span><div class="score-bar" style="width:57px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>19.0<span style="color:#94a3b8">/25</span></td>
+        <td>6.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>11.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">47</td>
+        <td class="">1.0x</td>
+        <td><span class="alloc-badge">$3.1</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">8</span></td>
+        <td><div class="ticker">ADSK</div><div style="font-size:10px;color:#64748b">Autodesk, Inc.</div></td>
+        <td>$265.53</td>
+        <td class="up">+0.42%</td>
+        <td><span class="total-score" style="color:#22c55e">79.0</span><div class="score-bar" style="width:57px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>12.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">63</td>
+        <td class="">1.0x</td>
+        <td><span class="alloc-badge">$2.0</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">9</span></td>
+        <td><div class="ticker">SHOP</div><div style="font-size:10px;color:#64748b">Shopify Inc.</div></td>
+        <td>$147.81</td>
+        <td class="up">+0.49%</td>
+        <td><span class="total-score" style="color:#22c55e">77.5</span><div class="score-bar" style="width:56px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>13.0<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>13.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">43</td>
+        <td class="">0.8x</td>
+        <td><span class="alloc-badge">$1.1</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">10</span></td>
+        <td><div class="ticker">WDAY</div><div style="font-size:10px;color:#64748b">Workday, Inc.</div></td>
+        <td>$194.06</td>
+        <td class="down">-1.22%</td>
+        <td><span class="total-score" style="color:#22c55e">77.0</span><div class="score-bar" style="width:56px"></div></td>
+        <td>28.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>12.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">49</td>
+        <td class="">1.1x</td>
+        <td><span class="alloc-badge">$0.4</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">11</span></td>
+        <td><div class="ticker">CSX</div><div style="font-size:10px;color:#64748b">CSX Corporation</div></td>
+        <td>$52.03</td>
+        <td class="down">-0.04%</td>
+        <td><span class="total-score" style="color:#22c55e">77.0</span><div class="score-bar" style="width:56px"></div></td>
+        <td>28.0<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>10.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>15.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">58</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">12</span></td>
+        <td><div class="ticker">ADI</div><div style="font-size:10px;color:#64748b">Analog Devices,</div></td>
+        <td>$383.17</td>
+        <td class="down">-3.72%</td>
+        <td><span class="total-score" style="color:#22c55e">76.0</span><div class="score-bar" style="width:55px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>7.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">44</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">13</span></td>
+        <td><div class="ticker">PLTR</div><div style="font-size:10px;color:#64748b">Palantir Techno</div></td>
+        <td>$160.39</td>
+        <td class="down">-4.52%</td>
+        <td><span class="total-score" style="color:#22c55e">76.0</span><div class="score-bar" style="width:55px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.0<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>9.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">35</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">14</span></td>
+        <td><div class="ticker">ABNB</div><div style="font-size:10px;color:#64748b">Airbnb, Inc.</div></td>
+        <td>$186.19</td>
+        <td class="down">-0.32%</td>
+        <td><span class="total-score" style="color:#22c55e">75.5</span><div class="score-bar" style="width:54px"></div></td>
+        <td>28.5<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>8.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>15.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">60</td>
+        <td class="">1.5x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">15</span></td>
+        <td><div class="ticker">AVGO</div><div style="font-size:10px;color:#64748b">Broadcom Inc.</div></td>
+        <td>$333.40</td>
+        <td class="down">-3.92%</td>
+        <td><span class="total-score" style="color:#22c55e">73.5</span><div class="score-bar" style="width:53px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>20.5<span style="color:#94a3b8">/25</span></td>
+        <td>6.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>4.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">49</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">16</span></td>
+        <td><div class="ticker">NFLX</div><div style="font-size:10px;color:#64748b">Netflix, Inc.</div></td>
+        <td>$60.75</td>
+        <td class="down">-2.25%</td>
+        <td><span class="total-score" style="color:#22c55e">73.5</span><div class="score-bar" style="width:53px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>19.0<span style="color:#94a3b8">/25</span></td>
+        <td>7.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>5.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">35</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">17</span></td>
+        <td><div class="ticker">AAPL</div><div style="font-size:10px;color:#64748b">Apple Inc.</div></td>
+        <td>$352.78</td>
+        <td class="down">-0.98%</td>
+        <td><span class="total-score" style="color:#22c55e">73.5</span><div class="score-bar" style="width:53px"></div></td>
+        <td>22.0<span style="color:#94a3b8">/30</span></td>
+        <td>14.5<span style="color:#94a3b8">/25</span></td>
+        <td>9.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>15.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">57</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">18</span></td>
+        <td><div class="ticker">AMAT</div><div style="font-size:10px;color:#64748b">Applied Materia</div></td>
+        <td>$350.25</td>
+        <td class="down">-5.47%</td>
+        <td><span class="total-score" style="color:#22c55e">73.0</span><div class="score-bar" style="width:53px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>19.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>3.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">39</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">19</span></td>
+        <td><div class="ticker">MDLZ</div><div style="font-size:10px;color:#64748b">Mondelez Intern</div></td>
+        <td>$67.54</td>
+        <td class="up">+0.00%</td>
+        <td><span class="total-score" style="color:#22c55e">73.0</span><div class="score-bar" style="width:53px"></div></td>
+        <td>23.5<span style="color:#94a3b8">/30</span></td>
+        <td>14.5<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>14.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">64</td>
+        <td class="">1.3x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">20</span></td>
+        <td><div class="ticker">MU</div><div style="font-size:10px;color:#64748b">Micron Technolo</div></td>
+        <td>$719.02</td>
+        <td class="down">-7.62%</td>
+        <td><span class="total-score" style="color:#22c55e">72.5</span><div class="score-bar" style="width:52px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>19.0<span style="color:#94a3b8">/25</span></td>
+        <td>7.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>4.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">38</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">21</span></td>
+        <td><div class="ticker">CSCO</div><div style="font-size:10px;color:#64748b">Cisco Systems, </div></td>
+        <td>$94.52</td>
+        <td class="down">-1.17%</td>
+        <td><span class="total-score" style="color:#22c55e">72.5</span><div class="score-bar" style="width:52px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>19.0<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">36</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">22</span></td>
+        <td><div class="ticker">ROP</div><div style="font-size:10px;color:#64748b">Roper Technolog</div></td>
+        <td>$483.72</td>
+        <td class="up">+0.78%</td>
+        <td><span class="total-score" style="color:#22c55e">72.0</span><div class="score-bar" style="width:52px"></div></td>
+        <td>26.5<span style="color:#94a3b8">/30</span></td>
+        <td>13.0<span style="color:#94a3b8">/25</span></td>
+        <td>10.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>10.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="down">73</td>
+        <td class="">0.5x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">23</span></td>
+        <td><div class="ticker">NVDA</div><div style="font-size:10px;color:#64748b">NVIDIA Corporat</div></td>
+        <td>$156.14</td>
+        <td class="down">-4.12%</td>
+        <td><span class="total-score" style="color:#22c55e">72.0</span><div class="score-bar" style="width:52px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>20.5<span style="color:#94a3b8">/25</span></td>
+        <td>5.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>4.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">23</td>
+        <td class="">1.5x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">24</span></td>
+        <td><div class="ticker">PAYX</div><div style="font-size:10px;color:#64748b">Paychex, Inc.</div></td>
+        <td>$117.77</td>
+        <td class="up">+1.81%</td>
+        <td><span class="total-score" style="color:#22c55e">72.0</span><div class="score-bar" style="width:52px"></div></td>
+        <td>21.0<span style="color:#94a3b8">/30</span></td>
+        <td>13.0<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>18.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">60</td>
+        <td class="">1.1x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-buy">🟢 매수</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">25</span></td>
+        <td><div class="ticker">GEHC</div><div style="font-size:10px;color:#64748b">GE HealthCare T</div></td>
+        <td>$82.96</td>
+        <td class="down">-0.07%</td>
+        <td><span class="total-score" style="color:#3b82f6">71.5</span><div class="score-bar" style="width:52px"></div></td>
+        <td>25.5<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>13.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">68</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">26</span></td>
+        <td><div class="ticker">APP</div><div style="font-size:10px;color:#64748b">Applovin Corpor</div></td>
+        <td>$415.22</td>
+        <td class="up">+1.50%</td>
+        <td><span class="total-score" style="color:#3b82f6">71.5</span><div class="score-bar" style="width:52px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>6.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>6.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="down">73</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">27</span></td>
+        <td><div class="ticker">LRCX</div><div style="font-size:10px;color:#64748b">Lam Research Co</div></td>
+        <td>$210.83</td>
+        <td class="down">-6.68%</td>
+        <td><span class="total-score" style="color:#3b82f6">71.5</span><div class="score-bar" style="width:52px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>19.0<span style="color:#94a3b8">/25</span></td>
+        <td>7.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>3.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">38</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">28</span></td>
+        <td><div class="ticker">SNPS</div><div style="font-size:10px;color:#64748b">Synopsys, Inc.</div></td>
+        <td>$441.33</td>
+        <td class="down">-3.05%</td>
+        <td><span class="total-score" style="color:#3b82f6">71.0</span><div class="score-bar" style="width:51px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>13.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>7.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">44</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">29</span></td>
+        <td><div class="ticker">DASH</div><div style="font-size:10px;color:#64748b">DoorDash, Inc.</div></td>
+        <td>$169.78</td>
+        <td class="down">-1.01%</td>
+        <td><span class="total-score" style="color:#3b82f6">71.0</span><div class="score-bar" style="width:51px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>16.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>4.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">40</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">30</span></td>
+        <td><div class="ticker">TMUS</div><div style="font-size:10px;color:#64748b">T-Mobile US, In</div></td>
+        <td>$170.01</td>
+        <td class="up">+0.04%</td>
+        <td><span class="total-score" style="color:#3b82f6">71.0</span><div class="score-bar" style="width:51px"></div></td>
+        <td>29.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>6.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>6.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">60</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">31</span></td>
+        <td><div class="ticker">KDP</div><div style="font-size:10px;color:#64748b">Keurig Dr Peppe</div></td>
+        <td>$35.58</td>
+        <td class="down">-2.09%</td>
+        <td><span class="total-score" style="color:#3b82f6">70.5</span><div class="score-bar" style="width:51px"></div></td>
+        <td>26.0<span style="color:#94a3b8">/30</span></td>
+        <td>12.5<span style="color:#94a3b8">/25</span></td>
+        <td>6.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>14.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">52</td>
+        <td class="">1.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">32</span></td>
+        <td><div class="ticker">STX</div><div style="font-size:10px;color:#64748b">Seagate Technol</div></td>
+        <td>$499.00</td>
+        <td class="down">-5.54%</td>
+        <td><span class="total-score" style="color:#3b82f6">70.0</span><div class="score-bar" style="width:50px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>3.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">34</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">33</span></td>
+        <td><div class="ticker">ROST</div><div style="font-size:10px;color:#64748b">Ross Stores, In</div></td>
+        <td>$222.99</td>
+        <td class="down">-3.75%</td>
+        <td><span class="total-score" style="color:#3b82f6">70.0</span><div class="score-bar" style="width:50px"></div></td>
+        <td>29.0<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>8.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>9.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">41</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">34</span></td>
+        <td><div class="ticker">TER</div><div style="font-size:10px;color:#64748b">Teradyne, Inc.</div></td>
+        <td>$231.90</td>
+        <td class="down">-7.07%</td>
+        <td><span class="total-score" style="color:#3b82f6">69.5</span><div class="score-bar" style="width:50px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>6.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>3.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">34</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">35</span></td>
+        <td><div class="ticker">KLAC</div><div style="font-size:10px;color:#64748b">KLA Corporation</div></td>
+        <td>$143.96</td>
+        <td class="down">-5.35%</td>
+        <td><span class="total-score" style="color:#3b82f6">69.5</span><div class="score-bar" style="width:50px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>15.5<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>3.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">41</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">36</span></td>
+        <td><div class="ticker">ASML</div><div style="font-size:10px;color:#64748b">ASML Holding N.</div></td>
+        <td>$1406.79</td>
+        <td class="down">-5.91%</td>
+        <td><span class="total-score" style="color:#3b82f6">69.5</span><div class="score-bar" style="width:50px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>19.0<span style="color:#94a3b8">/25</span></td>
+        <td>6.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">36</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">37</span></td>
+        <td><div class="ticker">DDOG</div><div style="font-size:10px;color:#64748b">Datadog, Inc.</div></td>
+        <td>$172.86</td>
+        <td class="down">-6.14%</td>
+        <td><span class="total-score" style="color:#3b82f6">69.0</span><div class="score-bar" style="width:50px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">28</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">38</span></td>
+        <td><div class="ticker">WDC</div><div style="font-size:10px;color:#64748b">Western Digital</div></td>
+        <td>$280.93</td>
+        <td class="down">-4.98%</td>
+        <td><span class="total-score" style="color:#3b82f6">68.5</span><div class="score-bar" style="width:49px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>6.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">36</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">39</span></td>
+        <td><div class="ticker">AMZN</div><div style="font-size:10px;color:#64748b">Amazon.com, Inc</div></td>
+        <td>$257.75</td>
+        <td class="down">-3.34%</td>
+        <td><span class="total-score" style="color:#3b82f6">68.0</span><div class="score-bar" style="width:49px"></div></td>
+        <td>14.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>16.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">50</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">40</span></td>
+        <td><div class="ticker">FTNT</div><div style="font-size:10px;color:#64748b">Fortinet, Inc.</div></td>
+        <td>$123.27</td>
+        <td class="down">-3.10%</td>
+        <td><span class="total-score" style="color:#3b82f6">67.5</span><div class="score-bar" style="width:49px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>15.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">31</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">41</span></td>
+        <td><div class="ticker">MCHP</div><div style="font-size:10px;color:#64748b">Microchip Techn</div></td>
+        <td>$58.64</td>
+        <td class="down">-4.93%</td>
+        <td><span class="total-score" style="color:#3b82f6">67.5</span><div class="score-bar" style="width:49px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>5.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">32</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">42</span></td>
+        <td><div class="ticker">DXCM</div><div style="font-size:10px;color:#64748b">DexCom, Inc.</div></td>
+        <td>$81.61</td>
+        <td class="down">-2.06%</td>
+        <td><span class="total-score" style="color:#3b82f6">67.0</span><div class="score-bar" style="width:48px"></div></td>
+        <td>20.5<span style="color:#94a3b8">/30</span></td>
+        <td>14.0<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>11.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">48</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">43</span></td>
+        <td><div class="ticker">ALNY</div><div style="font-size:10px;color:#64748b">Alnylam Pharmac</div></td>
+        <td>$159.73</td>
+        <td class="down">-3.22%</td>
+        <td><span class="total-score" style="color:#3b82f6">66.5</span><div class="score-bar" style="width:48px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>16.0<span style="color:#94a3b8">/25</span></td>
+        <td>6.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">32</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">44</span></td>
+        <td><div class="ticker">ADBE</div><div style="font-size:10px;color:#64748b">Adobe Inc.</div></td>
+        <td>$246.00</td>
+        <td class="up">+1.20%</td>
+        <td><span class="total-score" style="color:#3b82f6">66.0</span><div class="score-bar" style="width:48px"></div></td>
+        <td>24.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>6.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>6.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">50</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">45</span></td>
+        <td><div class="ticker">ADP</div><div style="font-size:10px;color:#64748b">Automatic Data </div></td>
+        <td>$313.43</td>
+        <td class="up">+1.13%</td>
+        <td><span class="total-score" style="color:#3b82f6">66.0</span><div class="score-bar" style="width:48px"></div></td>
+        <td>19.5<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>14.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">69</td>
+        <td class="">1.1x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">46</span></td>
+        <td><div class="ticker">MRVL</div><div style="font-size:10px;color:#64748b">Marvell Technol</div></td>
+        <td>$145.36</td>
+        <td class="down">-7.27%</td>
+        <td><span class="total-score" style="color:#3b82f6">66.0</span><div class="score-bar" style="width:48px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>6.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>0.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">33</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">47</span></td>
+        <td><div class="ticker">SBUX</div><div style="font-size:10px;color:#64748b">Starbucks Corpo</div></td>
+        <td>$108.72</td>
+        <td class="up">+2.14%</td>
+        <td><span class="total-score" style="color:#3b82f6">65.5</span><div class="score-bar" style="width:47px"></div></td>
+        <td>20.5<span style="color:#94a3b8">/30</span></td>
+        <td>14.0<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>10.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">63</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">48</span></td>
+        <td><div class="ticker">LITE</div><div style="font-size:10px;color:#64748b">Lumentum Holdin</div></td>
+        <td>$546.00</td>
+        <td class="down">-8.48%</td>
+        <td><span class="total-score" style="color:#3b82f6">65.0</span><div class="score-bar" style="width:47px"></div></td>
+        <td>26.5<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>6.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">35</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">49</span></td>
+        <td><div class="ticker">PCAR</div><div style="font-size:10px;color:#64748b">PACCAR Inc.</div></td>
+        <td>$105.53</td>
+        <td class="down">-1.06%</td>
+        <td><span class="total-score" style="color:#3b82f6">65.0</span><div class="score-bar" style="width:47px"></div></td>
+        <td>27.0<span style="color:#94a3b8">/30</span></td>
+        <td>16.0<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">47</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">50</span></td>
+        <td><div class="ticker">AMGN</div><div style="font-size:10px;color:#64748b">Amgen Inc.</div></td>
+        <td>$462.32</td>
+        <td class="down">-0.72%</td>
+        <td><span class="total-score" style="color:#3b82f6">64.5</span><div class="score-bar" style="width:46px"></div></td>
+        <td>19.5<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>12.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">59</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">51</span></td>
+        <td><div class="ticker">CEG</div><div style="font-size:10px;color:#64748b">Constellation E</div></td>
+        <td>$277.82</td>
+        <td class="down">-0.70%</td>
+        <td><span class="total-score" style="color:#3b82f6">64.0</span><div class="score-bar" style="width:46px"></div></td>
+        <td>28.0<span style="color:#94a3b8">/30</span></td>
+        <td>5.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>11.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">55</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">52</span></td>
+        <td><div class="ticker">MAR</div><div style="font-size:10px;color:#64748b">Marriott Intern</div></td>
+        <td>$425.70</td>
+        <td class="up">+0.60%</td>
+        <td><span class="total-score" style="color:#3b82f6">63.5</span><div class="score-bar" style="width:46px"></div></td>
+        <td>20.0<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>8.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>12.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">69</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">53</span></td>
+        <td><div class="ticker">HONA</div><div style="font-size:10px;color:#64748b">Honeywell Aeros</div></td>
+        <td>$163.36</td>
+        <td class="down">-1.00%</td>
+        <td><span class="total-score" style="color:#3b82f6">63.5</span><div class="score-bar" style="width:46px"></div></td>
+        <td>15.5<span style="color:#94a3b8">/30</span></td>
+        <td>16.0<span style="color:#94a3b8">/25</span></td>
+        <td>5.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>14.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">52</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">54</span></td>
+        <td><div class="ticker">FANG</div><div style="font-size:10px;color:#64748b">Diamondback Ene</div></td>
+        <td>$177.41</td>
+        <td class="down">-4.07%</td>
+        <td><span class="total-score" style="color:#3b82f6">63.5</span><div class="score-bar" style="width:46px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>14.0<span style="color:#94a3b8">/25</span></td>
+        <td>5.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">37</td>
+        <td class="">1.6x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">55</span></td>
+        <td><div class="ticker">GOOGL</div><div style="font-size:10px;color:#64748b">Alphabet Inc.</div></td>
+        <td>$283.72</td>
+        <td class="down">-4.07%</td>
+        <td><span class="total-score" style="color:#3b82f6">63.0</span><div class="score-bar" style="width:45px"></div></td>
+        <td>20.5<span style="color:#94a3b8">/30</span></td>
+        <td>18.5<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>3.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">34</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">56</span></td>
+        <td><div class="ticker">FAST</div><div style="font-size:10px;color:#64748b">Fastenal Compan</div></td>
+        <td>$55.11</td>
+        <td class="down">-0.14%</td>
+        <td><span class="total-score" style="color:#3b82f6">62.5</span><div class="score-bar" style="width:45px"></div></td>
+        <td>20.5<span style="color:#94a3b8">/30</span></td>
+        <td>7.0<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>14.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">67</td>
+        <td class="">1.2x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">57</span></td>
+        <td><div class="ticker">PANW</div><div style="font-size:10px;color:#64748b">Palo Alto Netwo</div></td>
+        <td>$316.09</td>
+        <td class="down">-1.91%</td>
+        <td><span class="total-score" style="color:#3b82f6">62.5</span><div class="score-bar" style="width:45px"></div></td>
+        <td>18.0<span style="color:#94a3b8">/30</span></td>
+        <td>14.5<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>9.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">37</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">58</span></td>
+        <td><div class="ticker">VRTX</div><div style="font-size:10px;color:#64748b">Vertex Pharmace</div></td>
+        <td>$537.79</td>
+        <td class="down">-0.15%</td>
+        <td><span class="total-score" style="color:#3b82f6">62.5</span><div class="score-bar" style="width:45px"></div></td>
+        <td>14.5<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>15.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">52</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">59</span></td>
+        <td><div class="ticker">SNDK</div><div style="font-size:10px;color:#64748b">Sandisk Corpora</div></td>
+        <td>$809.11</td>
+        <td class="down">-8.58%</td>
+        <td><span class="total-score" style="color:#3b82f6">62.0</span><div class="score-bar" style="width:45px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>6.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">31</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">60</span></td>
+        <td><div class="ticker">PYPL</div><div style="font-size:10px;color:#64748b">PayPal Holdings</div></td>
+        <td>$58.83</td>
+        <td class="down">-0.76%</td>
+        <td><span class="total-score" style="color:#3b82f6">62.0</span><div class="score-bar" style="width:45px"></div></td>
+        <td>12.0<span style="color:#94a3b8">/30</span></td>
+        <td>16.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>14.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">55</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">61</span></td>
+        <td><div class="ticker">TRI</div><div style="font-size:10px;color:#64748b">Thomson Reuters</div></td>
+        <td>$108.29</td>
+        <td class="down">-0.92%</td>
+        <td><span class="total-score" style="color:#3b82f6">61.0</span><div class="score-bar" style="width:44px"></div></td>
+        <td>15.0<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>5.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>17.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">46</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">62</span></td>
+        <td><div class="ticker">IDXX</div><div style="font-size:10px;color:#64748b">IDEXX Laborator</div></td>
+        <td>$700.65</td>
+        <td class="down">-0.51%</td>
+        <td><span class="total-score" style="color:#3b82f6">61.0</span><div class="score-bar" style="width:44px"></div></td>
+        <td>21.5<span style="color:#94a3b8">/30</span></td>
+        <td>7.0<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>11.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="down">70</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">63</span></td>
+        <td><div class="ticker">QCOM</div><div style="font-size:10px;color:#64748b">QUALCOMM Incorp</div></td>
+        <td>$168.52</td>
+        <td class="down">-2.29%</td>
+        <td><span class="total-score" style="color:#3b82f6">61.0</span><div class="score-bar" style="width:44px"></div></td>
+        <td>17.0<span style="color:#94a3b8">/30</span></td>
+        <td>15.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>9.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">46</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">64</span></td>
+        <td><div class="ticker">CDNS</div><div style="font-size:10px;color:#64748b">Cadence Design </div></td>
+        <td>$309.43</td>
+        <td class="down">-4.20%</td>
+        <td><span class="total-score" style="color:#3b82f6">61.0</span><div class="score-bar" style="width:44px"></div></td>
+        <td>21.0<span style="color:#94a3b8">/30</span></td>
+        <td>13.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>6.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">42</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">65</span></td>
+        <td><div class="ticker">MELI</div><div style="font-size:10px;color:#64748b">MercadoLibre, I</div></td>
+        <td>$1462.12</td>
+        <td class="down">-1.97%</td>
+        <td><span class="total-score" style="color:#3b82f6">60.5</span><div class="score-bar" style="width:44px"></div></td>
+        <td>23.0<span style="color:#94a3b8">/30</span></td>
+        <td>16.0<span style="color:#94a3b8">/25</span></td>
+        <td>7.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">32</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">66</span></td>
+        <td><div class="ticker">XEL</div><div style="font-size:10px;color:#64748b">Xcel Energy Inc</div></td>
+        <td>$81.21</td>
+        <td class="down">-0.49%</td>
+        <td><span class="total-score" style="color:#3b82f6">60.5</span><div class="score-bar" style="width:44px"></div></td>
+        <td>21.0<span style="color:#94a3b8">/30</span></td>
+        <td>10.0<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>10.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">66</td>
+        <td class="">1.4x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">67</span></td>
+        <td><div class="ticker">GOOG</div><div style="font-size:10px;color:#64748b">Alphabet Inc.</div></td>
+        <td>$281.26</td>
+        <td class="down">-3.85%</td>
+        <td><span class="total-score" style="color:#3b82f6">60.0</span><div class="score-bar" style="width:43px"></div></td>
+        <td>20.5<span style="color:#94a3b8">/30</span></td>
+        <td>18.5<span style="color:#94a3b8">/25</span></td>
+        <td>5.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>3.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">34</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">68</span></td>
+        <td><div class="ticker">CTAS</div><div style="font-size:10px;color:#64748b">Cintas Corporat</div></td>
+        <td>$224.16</td>
+        <td class="down">-0.92%</td>
+        <td><span class="total-score" style="color:#3b82f6">60.0</span><div class="score-bar" style="width:43px"></div></td>
+        <td>19.0<span style="color:#94a3b8">/30</span></td>
+        <td>7.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>14.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">59</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">69</span></td>
+        <td><div class="ticker">ALAB</div><div style="font-size:10px;color:#64748b">Astera Labs, In</div></td>
+        <td>$202.34</td>
+        <td class="down">-8.79%</td>
+        <td><span class="total-score" style="color:#3b82f6">60.0</span><div class="score-bar" style="width:43px"></div></td>
+        <td>30.0<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>4.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">36</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">70</span></td>
+        <td><div class="ticker">BKNG</div><div style="font-size:10px;color:#64748b">Booking Holding</div></td>
+        <td>$157.53</td>
+        <td class="down">-1.28%</td>
+        <td><span class="total-score" style="color:#3b82f6">60.0</span><div class="score-bar" style="width:43px"></div></td>
+        <td>21.0<span style="color:#94a3b8">/30</span></td>
+        <td>16.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">47</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">71</span></td>
+        <td><div class="ticker">PEP</div><div style="font-size:10px;color:#64748b">Pepsico, Inc.</div></td>
+        <td>$146.43</td>
+        <td class="up">+0.68%</td>
+        <td><span class="total-score" style="color:#3b82f6">60.0</span><div class="score-bar" style="width:43px"></div></td>
+        <td>22.0<span style="color:#94a3b8">/30</span></td>
+        <td>10.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>8.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">68</td>
+        <td class="">1.1x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-hold">🔵 보유/관망</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">72</span></td>
+        <td><div class="ticker">ODFL</div><div style="font-size:10px;color:#64748b">Old Dominion Fr</div></td>
+        <td>$174.29</td>
+        <td class="down">-0.14%</td>
+        <td><span class="total-score" style="color:#f59e0b">59.5</span><div class="score-bar" style="width:43px"></div></td>
+        <td>26.0<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>5.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>4.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">47</td>
+        <td class="">1.1x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">73</span></td>
+        <td><div class="ticker">INTU</div><div style="font-size:10px;color:#64748b">Intuit Inc.</div></td>
+        <td>$345.56</td>
+        <td class="up">+1.13%</td>
+        <td><span class="total-score" style="color:#f59e0b">58.5</span><div class="score-bar" style="width:42px"></div></td>
+        <td>17.5<span style="color:#94a3b8">/30</span></td>
+        <td>15.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>6.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">57</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">74</span></td>
+        <td><div class="ticker">CMCSA</div><div style="font-size:10px;color:#64748b">Comcast Corpora</div></td>
+        <td>$25.60</td>
+        <td class="up">+1.75%</td>
+        <td><span class="total-score" style="color:#f59e0b">58.0</span><div class="score-bar" style="width:42px"></div></td>
+        <td>15.0<span style="color:#94a3b8">/30</span></td>
+        <td>15.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>8.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">70</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">75</span></td>
+        <td><div class="ticker">AEP</div><div style="font-size:10px;color:#64748b">American Electr</div></td>
+        <td>$129.34</td>
+        <td class="up">+0.12%</td>
+        <td><span class="total-score" style="color:#f59e0b">57.5</span><div class="score-bar" style="width:41px"></div></td>
+        <td>18.5<span style="color:#94a3b8">/30</span></td>
+        <td>8.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>11.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">60</td>
+        <td class="">1.1x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">76</span></td>
+        <td><div class="ticker">ISRG</div><div style="font-size:10px;color:#64748b">Intuitive Surgi</div></td>
+        <td>$437.75</td>
+        <td class="down">-1.32%</td>
+        <td><span class="total-score" style="color:#f59e0b">57.5</span><div class="score-bar" style="width:41px"></div></td>
+        <td>19.0<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>6.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">49</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">77</span></td>
+        <td><div class="ticker">AXON</div><div style="font-size:10px;color:#64748b">Axon Enterprise</div></td>
+        <td>$306.44</td>
+        <td class="down">-2.85%</td>
+        <td><span class="total-score" style="color:#f59e0b">56.5</span><div class="score-bar" style="width:41px"></div></td>
+        <td>20.5<span style="color:#94a3b8">/30</span></td>
+        <td>14.0<span style="color:#94a3b8">/25</span></td>
+        <td>5.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>4.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">28</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">78</span></td>
+        <td><div class="ticker">ORLY</div><div style="font-size:10px;color:#64748b">O'Reilly Automo</div></td>
+        <td>$92.70</td>
+        <td class="up">+0.55%</td>
+        <td><span class="total-score" style="color:#f59e0b">56.0</span><div class="score-bar" style="width:40px"></div></td>
+        <td>15.5<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>9.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>8.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">61</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">79</span></td>
+        <td><div class="ticker">GILD</div><div style="font-size:10px;color:#64748b">Gilead Sciences</div></td>
+        <td>$167.58</td>
+        <td class="down">-0.30%</td>
+        <td><span class="total-score" style="color:#f59e0b">56.0</span><div class="score-bar" style="width:40px"></div></td>
+        <td>7.0<span style="color:#94a3b8">/30</span></td>
+        <td>13.0<span style="color:#94a3b8">/25</span></td>
+        <td>10.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>14.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">58</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">80</span></td>
+        <td><div class="ticker">LIN</div><div style="font-size:10px;color:#64748b">Linde plc</div></td>
+        <td>$523.46</td>
+        <td class="down">-0.49%</td>
+        <td><span class="total-score" style="color:#f59e0b">55.0</span><div class="score-bar" style="width:40px"></div></td>
+        <td>10.5<span style="color:#94a3b8">/30</span></td>
+        <td>13.0<span style="color:#94a3b8">/25</span></td>
+        <td>9.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>10.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">62</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">81</span></td>
+        <td><div class="ticker">ARM</div><div style="font-size:10px;color:#64748b">Arm Holdings pl</div></td>
+        <td>$175.05</td>
+        <td class="down">-8.12%</td>
+        <td><span class="total-score" style="color:#f59e0b">54.5</span><div class="score-bar" style="width:39px"></div></td>
+        <td>18.5<span style="color:#94a3b8">/30</span></td>
+        <td>13.0<span style="color:#94a3b8">/25</span></td>
+        <td>5.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>5.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">36</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">82</span></td>
+        <td><div class="ticker">CRWD</div><div style="font-size:10px;color:#64748b">CrowdStrike Hol</div></td>
+        <td>$223.21</td>
+        <td class="down">-1.50%</td>
+        <td><span class="total-score" style="color:#f59e0b">54.5</span><div class="score-bar" style="width:39px"></div></td>
+        <td>16.5<span style="color:#94a3b8">/30</span></td>
+        <td>7.0<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>11.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">40</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">83</span></td>
+        <td><div class="ticker">NBIS</div><div style="font-size:10px;color:#64748b">Nebius Group N.</div></td>
+        <td>$107.13</td>
+        <td class="down">-7.55%</td>
+        <td><span class="total-score" style="color:#f59e0b">53.5</span><div class="score-bar" style="width:38px"></div></td>
+        <td>19.0<span style="color:#94a3b8">/30</span></td>
+        <td>17.5<span style="color:#94a3b8">/25</span></td>
+        <td>2.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">34</td>
+        <td class="">1.1x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">84</span></td>
+        <td><div class="ticker">COST</div><div style="font-size:10px;color:#64748b">Costco Wholesal</div></td>
+        <td>$1113.74</td>
+        <td class="up">+0.68%</td>
+        <td><span class="total-score" style="color:#f59e0b">53.0</span><div class="score-bar" style="width:38px"></div></td>
+        <td>17.5<span style="color:#94a3b8">/30</span></td>
+        <td>4.0<span style="color:#94a3b8">/25</span></td>
+        <td>9.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>10.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="down">77</td>
+        <td class="">1.3x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">85</span></td>
+        <td><div class="ticker">CCEP</div><div style="font-size:10px;color:#64748b">Coca-Cola Europ</div></td>
+        <td>$119.19</td>
+        <td class="up">+0.52%</td>
+        <td><span class="total-score" style="color:#f59e0b">53.0</span><div class="score-bar" style="width:38px"></div></td>
+        <td>14.0<span style="color:#94a3b8">/30</span></td>
+        <td>5.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>14.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">65</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">86</span></td>
+        <td><div class="ticker">MNST</div><div style="font-size:10px;color:#64748b">Monster Beverag</div></td>
+        <td>$45.80</td>
+        <td class="down">-1.42%</td>
+        <td><span class="total-score" style="color:#f59e0b">53.0</span><div class="score-bar" style="width:38px"></div></td>
+        <td>18.5<span style="color:#94a3b8">/30</span></td>
+        <td>2.5<span style="color:#94a3b8">/25</span></td>
+        <td>7.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>13.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">50</td>
+        <td class="">1.1x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">87</span></td>
+        <td><div class="ticker">SPCX</div><div style="font-size:10px;color:#64748b">Space Explorati</div></td>
+        <td>$137.36</td>
+        <td class="down">-1.26%</td>
+        <td><span class="total-score" style="color:#f59e0b">52.5</span><div class="score-bar" style="width:38px"></div></td>
+        <td>18.0<span style="color:#94a3b8">/30</span></td>
+        <td>13.0<span style="color:#94a3b8">/25</span></td>
+        <td>5.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>4.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">45</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">88</span></td>
+        <td><div class="ticker">BKR</div><div style="font-size:10px;color:#64748b">Baker Hughes Co</div></td>
+        <td>$47.94</td>
+        <td class="down">-3.03%</td>
+        <td><span class="total-score" style="color:#f59e0b">52.5</span><div class="score-bar" style="width:38px"></div></td>
+        <td>18.5<span style="color:#94a3b8">/30</span></td>
+        <td>14.0<span style="color:#94a3b8">/25</span></td>
+        <td>6.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">37</td>
+        <td class="">1.0x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">89</span></td>
+        <td><div class="ticker">INTC</div><div style="font-size:10px;color:#64748b">Intel Corporati</div></td>
+        <td>$55.47</td>
+        <td class="down">-7.02%</td>
+        <td><span class="total-score" style="color:#f59e0b">52.5</span><div class="score-bar" style="width:38px"></div></td>
+        <td>13.5<span style="color:#94a3b8">/30</span></td>
+        <td>17.0<span style="color:#94a3b8">/25</span></td>
+        <td>6.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>4.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">30</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">90</span></td>
+        <td><div class="ticker">MRNA</div><div style="font-size:10px;color:#64748b">Moderna, Inc.</div></td>
+        <td>$215.27</td>
+        <td class="down">-3.63%</td>
+        <td><span class="total-score" style="color:#f59e0b">52.0</span><div class="score-bar" style="width:37px"></div></td>
+        <td>9.0<span style="color:#94a3b8">/30</span></td>
+        <td>10.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>12.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">47</td>
+        <td class="">0.5x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">91</span></td>
+        <td><div class="ticker">PDD</div><div style="font-size:10px;color:#64748b">PDD Holdings In</div></td>
+        <td>$78.11</td>
+        <td class="down">-1.09%</td>
+        <td><span class="total-score" style="color:#f59e0b">52.0</span><div class="score-bar" style="width:37px"></div></td>
+        <td>17.0<span style="color:#94a3b8">/30</span></td>
+        <td>16.0<span style="color:#94a3b8">/25</span></td>
+        <td>3.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>4.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">45</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">92</span></td>
+        <td><div class="ticker">CPRT</div><div style="font-size:10px;color:#64748b">Copart, Inc.</div></td>
+        <td>$32.08</td>
+        <td class="up">+0.79%</td>
+        <td><span class="total-score" style="color:#f59e0b">51.5</span><div class="score-bar" style="width:37px"></div></td>
+        <td>15.0<span style="color:#94a3b8">/30</span></td>
+        <td>7.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>9.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">63</td>
+        <td class="">0.6x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">93</span></td>
+        <td><div class="ticker">MSTR</div><div style="font-size:10px;color:#64748b">Strategy Inc</div></td>
+        <td>$103.03</td>
+        <td class="down">-7.70%</td>
+        <td><span class="total-score" style="color:#f59e0b">51.0</span><div class="score-bar" style="width:37px"></div></td>
+        <td>19.5<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>3.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>4.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="up">29</td>
+        <td class="">1.2x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">94</span></td>
+        <td><div class="ticker">HON</div><div style="font-size:10px;color:#64748b">Honeywell Inter</div></td>
+        <td>$217.95</td>
+        <td class="down">-2.03%</td>
+        <td><span class="total-score" style="color:#f59e0b">50.5</span><div class="score-bar" style="width:36px"></div></td>
+        <td>16.0<span style="color:#94a3b8">/30</span></td>
+        <td>7.0<span style="color:#94a3b8">/25</span></td>
+        <td>7.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>8.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">49</td>
+        <td class="">0.9x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-weak">⚪ 주의 관찰</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">95</span></td>
+        <td><div class="ticker">TTWO</div><div style="font-size:10px;color:#64748b">Take-Two Intera</div></td>
+        <td>$213.47</td>
+        <td class="down">-6.30%</td>
+        <td><span class="total-score" style="color:#dc2626">48.0</span><div class="score-bar" style="width:34px"></div></td>
+        <td>9.0<span style="color:#94a3b8">/30</span></td>
+        <td>8.5<span style="color:#94a3b8">/25</span></td>
+        <td>6.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>12.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">52</td>
+        <td class="">1.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-sell">🔴 전량 손절</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">96</span></td>
+        <td><div class="ticker">WMT</div><div style="font-size:10px;color:#64748b">Walmart Inc.</div></td>
+        <td>$128.41</td>
+        <td class="up">+0.25%</td>
+        <td><span class="total-score" style="color:#dc2626">46.0</span><div class="score-bar" style="width:33px"></div></td>
+        <td>8.5<span style="color:#94a3b8">/30</span></td>
+        <td>8.5<span style="color:#94a3b8">/25</span></td>
+        <td>8.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>8.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">68</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-partial">🟡 비중 축소 (추세 유지)</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">97</span></td>
+        <td><div class="ticker">CRWV</div><div style="font-size:10px;color:#64748b">CoreWeave, Inc.</div></td>
+        <td>$49.88</td>
+        <td class="down">-6.12%</td>
+        <td><span class="total-score" style="color:#dc2626">45.5</span><div class="score-bar" style="width:33px"></div></td>
+        <td>15.0<span style="color:#94a3b8">/30</span></td>
+        <td>11.5<span style="color:#94a3b8">/25</span></td>
+        <td>3.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>3.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">41</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-sell">🔴 전량 손절</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">98</span></td>
+        <td><div class="ticker">EXC</div><div style="font-size:10px;color:#64748b">Exelon Corporat</div></td>
+        <td>$46.46</td>
+        <td class="up">+0.45%</td>
+        <td><span class="total-score" style="color:#dc2626">44.5</span><div class="score-bar" style="width:32px"></div></td>
+        <td>6.5<span style="color:#94a3b8">/30</span></td>
+        <td>10.0<span style="color:#94a3b8">/25</span></td>
+        <td>8.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>8.0<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">66</td>
+        <td class="">1.2x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-partial">🟡 비중 축소 (추세 유지)</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">99</span></td>
+        <td><div class="ticker">RKLB</div><div style="font-size:10px;color:#64748b">Rocket Lab Corp</div></td>
+        <td>$57.37</td>
+        <td class="down">-6.76%</td>
+        <td><span class="total-score" style="color:#dc2626">44.0</span><div class="score-bar" style="width:32px"></div></td>
+        <td>15.0<span style="color:#94a3b8">/30</span></td>
+        <td>10.0<span style="color:#94a3b8">/25</span></td>
+        <td>4.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>2.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">48</td>
+        <td class="">0.7x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-sell">🔴 전량 손절</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">100</span></td>
+        <td><div class="ticker">TSLA</div><div style="font-size:10px;color:#64748b">Tesla, Inc.</div></td>
+        <td>$379.74</td>
+        <td class="down">-2.69%</td>
+        <td><span class="total-score" style="color:#dc2626">44.0</span><div class="score-bar" style="width:32px"></div></td>
+        <td>6.0<span style="color:#94a3b8">/30</span></td>
+        <td>10.0<span style="color:#94a3b8">/25</span></td>
+        <td>6.5<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>9.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="">49</td>
+        <td class="">0.8x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-partial">🟡 비중 축소 (추세 유지)</span></td>
+      </tr>
+    
+      <tr>
+        <td><span class="rank-num">101</span></td>
+        <td><div class="ticker">FER</div><div style="font-size:10px;color:#64748b">Ferrovial N.V.</div></td>
+        <td>$61.76</td>
+        <td class="up">+0.13%</td>
+        <td><span class="total-score" style="color:#dc2626">42.0</span><div class="score-bar" style="width:30px"></div></td>
+        <td>11.5<span style="color:#94a3b8">/30</span></td>
+        <td>4.0<span style="color:#94a3b8">/25</span></td>
+        <td>7.0<span style="color:#94a3b8">/10</span></td>
+        <td>7.0<span style="color:#94a3b8">/15</span></td>
+        <td>7.5<span style="color:#94a3b8">/20</span></td>
+        <td style="font-weight:bold;color:#2563eb">5.0<span style="color:#94a3b8;font-weight:normal">/10</span></td>
+        <td class="down">74</td>
+        <td class="">1.2x</td>
+        <td><span style="color:#94a3b8">—</span></td>
+        <td><span class="sig-partial">🟡 비중 축소 (추세 유지)</span></td>
+      </tr>
+    
+    </tbody>
+  </table>
+  </div>
+</div>
+
+
+<div class="section">
+  <div class="sec-title">🎯 마켓 인텔리전스 (AI 통합 브리핑)</div>
+  
+  <div class="hero-box">
+    <div class="hero-title">AI 섹터 전반의 약세 심화: 시장 하방 압력 가중</div>
+    <div style="font-size:13px;line-height:1.7;">어제 주요 ETF(SPY, QQQ)는 AI 연계 주식의 <span class="neg">약세</span>로 인해 전반적인 하락세를 보였습니다. 특히 SPY가 애플과 엔비디아를 매도했다는 소식은 AI 트레이드에 대한 <strong>깊은 우려</strong>를 반영하며, 엔비디아의 실적 발표를 앞두고 불확실성이 증폭되고 있습니다. 이러한 분위기 속에서 일부 바이오 기술주(REGN)의 긍정적인 소식에도 불구하고, 시장 전반의 <span class="neg">하방 압력은 상당할 것</span>으로 예상됩니다.</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+    <div class="panel">
+      <div class="ph"><span class="pt">주요 이슈 타임라인</span><span class="pb-badge pb-cyan">MARKET FLOW</span></div>
+      <div>
+        
+        <div class="tl-item">
+          <div class="tl-date">11월 16일-17일<br><span style="font-size:10px;font-weight:normal;">하락</span></div>
+          <div>
+            <div class="tl-head">AI 관련주 약세 심화 및 시장 전반 하방 압력</div>
+            <div style="font-size:12px;color:#475569;line-height:1.6;">SPY, QQQ 등 주요 ETF들이 AI 연계 주식 약세로 <span class="neg">하락 마감</span>했으며, SPY는 목요일 애플과 엔비디아를 매도한 것으로 알려졌습니다. 엔비디아 실적 발표를 앞두고 AI 트레이드에 대한 의문이 제기되고 있으며, AMD 역시 마이클 버리에 의해 '너무 비싸다'는 평가를 받으며 랠리가 꺾이는 모습입니다.</div>
+          </div>
+        </div>
+        
+        <div class="tl-item">
+          <div class="tl-date">오늘 예정<br><span style="font-size:10px;font-weight:normal;">주목</span></div>
+          <div>
+            <div class="tl-head">AI 섹터 불안정성 및 주요 ETF 움직임 주시</div>
+            <div style="font-size:12px;color:#475569;line-height:1.6;">오늘 시장은 AI 관련 기술주의 추가적인 조정 가능성과 이에 따른 주요 ETF들의 포트폴리오 변화에 주목해야 합니다. 거시 경제 지표 발표는 없으나, 개별 기업 이슈와 투자 심리 위축이 시장에 <strong>큰 영향</strong>을 미칠 것으로 예상됩니다.</div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph"><span class="pt">모닝 노트 (특징주 뉴스)</span><span class="pb-badge pb-amber">MORNING NOTE</span></div>
+      <div>
+        
+        <div class="mn-item">
+          <div class="mn-tick">SPY / QQQ</div>
+          <div>
+            <div class="tl-head">AI 연계 주식 약세로 주요 ETF 및 선물 하락</div>
+            <div style="font-size:12px;color:#475569;line-height:1.6;">SPY와 QQQ를 비롯한 주요 ETF 및 주식 선물은 AI 연계 주식의 <span class="neg">약세</span>로 개장 전부터 하락세를 보였으며, SPY는 목요일 애플과 엔비디아를 매도한 것으로 알려졌습니다.</div>
+          </div>
+        </div>
+        
+        <div class="mn-item">
+          <div class="mn-tick">NVIDIA / AMD</div>
+          <div>
+            <div class="tl-head">엔비디아 실적 발표 임박, AMD도 고평가 논란</div>
+            <div style="font-size:12px;color:#475569;line-height:1.6;">엔비디아의 실적 발표를 앞두고 AI 트레이드에 대한 불확실성이 커지고 있으며, AMD는 엔비디아의 혼란 속 기회라는 평가에도 불구하고 마이클 버리에 의해 '너무 비싸다'는 지적을 받으며 <span class="neg">상승세가 둔화</span>되었습니다.</div>
+          </div>
+        </div>
+        
+        <div class="mn-item">
+          <div class="mn-tick">MSFT</div>
+          <div>
+            <div class="tl-head">억만장자 투자자 빌 애크먼, 마이크로소프트 지분 축소</div>
+            <div style="font-size:12px;color:#475569;line-height:1.6;">유명 헤지펀드 매니저 빌 애크먼이 3분기 넷플릭스 지분을 늘리는 한편, <span class="neg">마이크로소프트 지분을 축소</span>했다는 소식이 전해지며 대형 기술주에 대한 투자 심리에 영향을 미칠 수 있습니다.</div>
+          </div>
+        </div>
+        
+        <div class="mn-item">
+          <div class="mn-tick">REGN</div>
+          <div>
+            <div class="tl-head">리제네론, 긍정적인 임상 데이터 및 높은 성장세</div>
+            <div style="font-size:12px;color:#475569;line-height:1.6;">리제네론은 MASLD 및 POTS 임상 2상에서 <span class="pos">고무적인 결과</span>를 발표했으며, 순현금 160억 달러 보유와 저평가 가능성이 제기되면서 한 달간 27.4% 급등하는 등 <span class="pos">강한 모멘텀</span>을 보이고 있습니다.</div>
+          </div>
+        </div>
+        
+        <div class="mn-item">
+          <div class="mn-tick">MPWR</div>
+          <div>
+            <div class="tl-head">모노리식 파워, ETF 순매도 발생</div>
+            <div style="font-size:12px;color:#475569;line-height:1.6;">모노리식 파워 시스템즈(MPWR)는 11월 12일 약 5,670만 달러 규모의 <span class="neg">순 ETF 매도</span>가 발생하여 단기적인 하방 압력에 직면할 수 있습니다.</div>
+          </div>
+        </div>
+        
+        <div class="mn-item">
+          <div class="mn-tick">META</div>
+          <div>
+            <div class="tl-head">메타, 친환경 에너지 투자 및 주가 하락</div>
+            <div style="font-size:12px;color:#475569;line-height:1.6;">메타는 네보야와 오클로 등과 협력하여 전기 트럭 및 핵연료에 <span class="pos">투자를 확대</span>하고 있으나, 자체 주가는 2% <span class="neg">하락</span>하는 등 혼조세를 보였습니다.</div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><span class="pt">전문가 나침반 (시장 뷰)</span><span class="pb-badge pb-cyan">EXPERT COMPASS</span></div>
+    <div class="exp-grid">
+      
+      <div class="exp-item">
+        <div class="exp-name">월가 주요 기관 시각</div>
+        <div style="font-size:12px;color:#475569;line-height:1.7;">AI 기술주 전반에 걸친 <strong>깊은 조정</strong>이 시작될 수 있으며, 이는 시장의 전반적인 하방 압력을 가중시킬 것입니다.</div>
+      </div>
+      
+      <div class="exp-item">
+        <div class="exp-name">월가 주요 기관 시각</div>
+        <div style="font-size:12px;color:#475569;line-height:1.7;">주요 ETF들의 포트폴리오 조정, 특히 엔비디아와 애플과 같은 핵심 기술주 매도는 투자자들에게 <strong>신중한 접근</strong>을 요구하는 신호입니다.</div>
+      </div>
+      
+      <div class="exp-item">
+        <div class="exp-name">월가 주요 기관 시각</div>
+        <div style="font-size:12px;color:#475569;line-height:1.7;">개별 종목 중 리제네론(REGN)과 같이 <span class="pos">탄탄한 펀더멘털</span>과 긍정적 임상 결과를 가진 바이오주는 시장 혼란 속에서도 <strong>빛을 발할 수 있는 잠재력</strong>을 가지고 있습니다.</div>
+      </div>
+      
+      <div class="exp-item">
+        <div class="exp-name">월가 주요 기관 시각</div>
+        <div style="font-size:12px;color:#475569;line-height:1.7;">현재 시장은 특정 섹터에 대한 과도한 기대를 재평가하는 단계에 있으며, 기업의 <strong>실질적인 가치와 성장 동력</strong>에 집중해야 합니다.</div>
+      </div>
+      
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="ph"><span class="pt">💡 초보 투자자 핵심 정리</span><span class="pb-badge pb-amber">BEGINNER GUIDE</span></div>
+    <div class="beg-grid">
+      <div>
+        <div class="beg-head">오늘 장세 한 문장 요약</div>
+        <div style="font-size:12px;color:#475569;line-height:1.7;">오늘 장세는 AI 기술주의 급격한 조정과 시장 전반의 <span class="neg">하방 압력</span>으로 인해 <strong>매우 높은 변동성</strong>을 보일 수 있으니 주의가 필요합니다.</div>
+      </div>
+      <div>
+        <div class="beg-head">지금 가져야 할 마음가짐 & 전략</div>
+        <div style="font-size:12px;color:#475569;line-height:1.7;"><ul><li>AI 관련 기술주에 대한 <span class="neg">과도한 추격 매수</span>는 자제하고, 기업의 펀더멘털을 <strong>철저히 분석</strong>하는 태도를 유지해야 합니다.</li><li>시장이 전반적으로 약세를 보일 때는 <span class="pos">현금 비중을 확보</span>하여 유동성을 유지하고, 투자 기회를 <strong>신중하게 모색</strong>하는 것이 현명합니다.</li><li>단기적인 시장 변동성에 일희일비하기보다는, 장기적인 관점에서 <span class="pos">성장 잠재력이 있는 종목</span>을 발굴하고 분할 매수를 고려하는 전략이 필요합니다.</li><li>언론 보도와 전문가 의견을 <strong>균형 있게</strong> 수용하되, 최종 투자 결정은 반드시 본인의 분석과 판단에 따라야 합니다.</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="section">
+  <div class="sec-title">📌 점수 기준 안내 (수정 전략 v8.6)</div>
+  <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <tr style="background:#f1f5f9">
+      <th style="padding:8px;text-align:left">기둥</th><th style="padding:8px;text-align:center">만점</th><th style="padding:8px;text-align:left">고득점 기준</th><th style="padding:8px;text-align:left">저득점 기준</th>
+    </tr>
+    
+    <tr style="border-bottom:1px solid #e2e8f0">
+      <td style="padding:8px;font-weight:700">① 펀더멘털</td><td style="padding:8px;text-align:center;font-weight:700;color:#2563eb">30</td><td style="padding:8px;color:#166534">EPS↑ 매출↑ FCF↑ ROE15%+ 순이익률↑</td><td style="padding:8px;color:#dc2626">EPS하향·역성장·FCF음수·ROE마이너스</td>
+    </tr>
+    
+    <tr style="border-bottom:1px solid #e2e8f0">
+      <td style="padding:8px;font-weight:700">② 매크로/가치</td><td style="padding:8px;text-align:center;font-weight:700;color:#2563eb">25</td><td style="padding:8px;color:#166534">PEG 1.0 이하 저평가·초대형주</td><td style="padding:8px;color:#dc2626">PEG 3.0 이상 고평가·소형주</td>
+    </tr>
+    
+    <tr style="border-bottom:1px solid #e2e8f0">
+      <td style="padding:8px;font-weight:700">③ 센티먼트/수급</td><td style="padding:8px;text-align:center;font-weight:700;color:#2563eb">10</td><td style="padding:8px;color:#166534">거래량 조용·52주 신고가 근접</td><td style="padding:8px;color:#dc2626">거래량 폭발·고점 대비 대폭 하락</td>
+    </tr>
+    
+    <tr style="border-bottom:1px solid #e2e8f0">
+      <td style="padding:8px;font-weight:700">④ 시장환경</td><td style="padding:8px;text-align:center;font-weight:700;color:#2563eb">15</td><td style="padding:8px;color:#166534">VIX<15·QQQ 200일선 위</td><td style="padding:8px;color:#dc2626">VIX>30·QQQ 200일선 붕괴</td>
+    </tr>
+    
+    <tr style="border-bottom:1px solid #e2e8f0">
+      <td style="padding:8px;font-weight:700">⑤ 기술적 타점</td><td style="padding:8px;text-align:center;font-weight:700;color:#2563eb">20</td><td style="padding:8px;color:#166534">눌림목·정배열·RSI 반등·MACD↑</td><td style="padding:8px;color:#dc2626">200일선 붕괴·RSI 과열·0점(매도)</td>
+    </tr>
+    
+    <tr style="border-bottom:1px solid #e2e8f0">
+      <td style="padding:8px;font-weight:700">⑥ 내부자 거래</td><td style="padding:8px;text-align:center;font-weight:700;color:#2563eb">10</td><td style="padding:8px;color:#166534">CEO/CFO 직접 매수·다수 동시매수·시총0.1%+</td><td style="padding:8px;color:#dc2626">클러스터 매도·CEO 대량매도</td>
+    </tr>
+    
+  </table>
+</div>
+<div class="footer">
+  퀀트멘털 v8.9 실시간 AI 자동 생성 리포트 · 데이터 기준일: 2026-11-16<br>
+  ⚠️ 본 리포트는 투자 참고용이며, 모든 투자 결정과 손익의 책임은 투자자 본인에게 있습니다.
+</div>
+</body>
+</html>
