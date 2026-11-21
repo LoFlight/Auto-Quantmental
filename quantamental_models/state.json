@@ -120,68 +120,74 @@
     "2026-11-13",
     "2026-11-16",
     "2026-11-17",
-    "2026-11-18"
+    "2026-11-18",
+    "2026-11-19",
+    "2026-11-20"
   ],
   "horizons": {
     "T1": {
       "trained_at": "2026-11-19T02:33:54.677527",
       "n_samples": 12052,
       "cv_mae": 2.1458,
-      "recent_mae": 2.1458,
+      "recent_mae": 2.8424,
       "best_iter": 153,
-      "total_trees": 153,
+      "total_trees": 183,
       "is_initial": false,
       "label": "다음날",
       "top3": [
         "market_breadth",
         "price_to_ma120",
         "macd_hist"
-      ]
+      ],
+      "last_update": "2026-11-21T02:13:46.460345"
     },
     "T5": {
       "trained_at": "2026-11-19T02:33:55.293695",
       "n_samples": 11616,
       "cv_mae": 4.9464,
-      "recent_mae": 4.9464,
+      "recent_mae": 6.6037,
       "best_iter": 75,
-      "total_trees": 75,
+      "total_trees": 105,
       "is_initial": false,
       "label": "1주 후",
       "top3": [
         "bb_width",
         "price_to_ma120",
         "market_breadth"
-      ]
+      ],
+      "last_update": "2026-11-21T02:13:46.483104"
     },
     "T21": {
       "trained_at": "2026-11-19T02:33:55.692312",
       "n_samples": 9883,
       "cv_mae": 9.7535,
-      "recent_mae": 9.7535,
+      "recent_mae": 11.6718,
       "best_iter": 24,
-      "total_trees": 24,
+      "total_trees": 54,
       "is_initial": false,
       "label": "1개월 후",
       "top3": [
         "price_to_ma120",
         "bb_width",
         "p1_p2_ratio"
-      ]
+      ],
+      "last_update": "2026-11-21T02:13:46.501365"
     },
     "T63": {
       "trained_at": "2026-11-19T02:33:56.091270",
       "n_samples": 5650,
       "cv_mae": 13.2192,
-      "recent_mae": 13.2192,
+      "recent_mae": 11.8453,
       "best_iter": 36,
-      "total_trees": 36,
+      "total_trees": 66,
       "is_initial": false,
       "label": "3개월 후",
       "top3": [
         "p1_p2_ratio",
         "price_to_ma120",
         "p2"
-      ]
+      ],
+      "last_update": "2026-11-21T02:13:46.519151"
     }
   },
   "last_full": {
