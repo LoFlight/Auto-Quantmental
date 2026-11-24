@@ -127,7 +127,7 @@
   ],
   "horizons": {
     "T1": {
-      "trained_at": "2026-11-24T04:07:36.468931",
+      "trained_at": "2026-11-24T05:21:55.954902",
       "n_samples": 12354,
       "cv_mae": 2.1831,
       "recent_mae": 2.1831,
@@ -142,7 +142,7 @@
       ]
     },
     "T5": {
-      "trained_at": "2026-11-24T04:07:37.089199",
+      "trained_at": "2026-11-24T05:21:56.285566",
       "n_samples": 11918,
       "cv_mae": 4.9924,
       "recent_mae": 4.9924,
@@ -157,40 +157,38 @@
       ]
     },
     "T21": {
-      "trained_at": "2026-11-19T02:33:55.692312",
-      "n_samples": 9883,
-      "cv_mae": 9.7535,
-      "recent_mae": 11.6604,
-      "best_iter": 24,
-      "total_trees": 84,
+      "trained_at": "2026-11-24T05:21:56.527017",
+      "n_samples": 10179,
+      "cv_mae": 9.8658,
+      "recent_mae": 9.8658,
+      "best_iter": 30,
+      "total_trees": 30,
       "is_initial": false,
       "label": "1개월 후",
       "top3": [
         "price_to_ma120",
-        "bb_width",
-        "p1_p2_ratio"
-      ],
-      "last_update": "2026-11-24T04:07:37.132861"
+        "p1_p2_ratio",
+        "bb_width"
+      ]
     },
     "T63": {
-      "trained_at": "2026-11-19T02:33:56.091270",
-      "n_samples": 5650,
-      "cv_mae": 13.2192,
-      "recent_mae": 12.1524,
-      "best_iter": 36,
-      "total_trees": 96,
+      "trained_at": "2026-11-24T05:21:56.765338",
+      "n_samples": 5943,
+      "cv_mae": 13.3982,
+      "recent_mae": 13.3982,
+      "best_iter": 60,
+      "total_trees": 60,
       "is_initial": false,
       "label": "3개월 후",
       "top3": [
         "p1_p2_ratio",
-        "price_to_ma120",
-        "p2"
-      ],
-      "last_update": "2026-11-24T04:07:37.157081"
+        "p2",
+        "price_to_ma120"
+      ]
     }
   },
   "last_full": {
-    "T1,T5,T21,T63,T126,T252": "2026-11-19T02:33:56.111172",
+    "T1,T5,T21,T63,T126,T252": "2026-11-24T05:21:56.775931",
     "T1": "2026-11-24T04:07:36.485801",
     "T5": "2026-11-24T04:07:37.105156",
     "T21": "2026-08-31T23:24:43.189759"
