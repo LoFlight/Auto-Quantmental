@@ -124,68 +124,73 @@
     "2026-11-19",
     "2026-11-20",
     "2026-11-23",
-    "2026-11-24"
+    "2026-11-24",
+    "2026-11-25"
   ],
   "horizons": {
     "T1": {
       "trained_at": "2026-11-25T04:32:34.518205",
       "n_samples": 12455,
       "cv_mae": 2.1977,
-      "recent_mae": 2.1977,
+      "recent_mae": 2.3481,
       "best_iter": 162,
-      "total_trees": 162,
+      "total_trees": 192,
       "is_initial": false,
       "label": "다음날",
       "top3": [
         "market_breadth",
         "price_to_ma120",
         "pct_change"
-      ]
+      ],
+      "last_update": "2026-11-25T23:16:45.714261"
     },
     "T5": {
       "trained_at": "2026-11-25T04:32:34.999951",
       "n_samples": 12019,
       "cv_mae": 4.9989,
-      "recent_mae": 4.9989,
+      "recent_mae": 5.5679,
       "best_iter": 61,
-      "total_trees": 61,
+      "total_trees": 91,
       "is_initial": false,
       "label": "1주 후",
       "top3": [
         "price_to_ma120",
         "bb_width",
         "market_breadth"
-      ]
+      ],
+      "last_update": "2026-11-25T23:16:45.736727"
     },
     "T21": {
       "trained_at": "2026-11-25T04:32:35.353958",
       "n_samples": 10280,
       "cv_mae": 9.9151,
-      "recent_mae": 9.9151,
+      "recent_mae": 11.6458,
       "best_iter": 28,
-      "total_trees": 28,
+      "total_trees": 58,
       "is_initial": false,
       "label": "1개월 후",
       "top3": [
         "price_to_ma120",
         "macd_hist",
         "bb_width"
-      ]
+      ],
+      "last_update": "2026-11-25T23:16:45.755973"
     },
     "T63": {
       "trained_at": "2026-11-25T04:32:35.639251",
       "n_samples": 6041,
       "cv_mae": 13.5367,
-      "recent_mae": 13.5367,
+      "recent_mae": 12.1915,
       "best_iter": 26,
-      "total_trees": 26,
+      "total_trees": 56,
       "is_initial": false,
       "label": "3개월 후",
       "top3": [
         "p1_p2_ratio",
         "p2",
         "price_to_ma120"
-      ]
+      ],
+      "last_update": "2026-11-25T23:16:45.774265"
     }
   },
   "last_full": {
