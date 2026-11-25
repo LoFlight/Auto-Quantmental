@@ -123,68 +123,73 @@
     "2026-11-18",
     "2026-11-19",
     "2026-11-20",
-    "2026-11-23"
+    "2026-11-23",
+    "2026-11-24"
   ],
   "horizons": {
     "T1": {
       "trained_at": "2026-11-24T05:21:55.954902",
       "n_samples": 12354,
       "cv_mae": 2.1831,
-      "recent_mae": 2.1831,
+      "recent_mae": 2.6115,
       "best_iter": 152,
-      "total_trees": 152,
+      "total_trees": 182,
       "is_initial": false,
       "label": "다음날",
       "top3": [
         "market_breadth",
         "price_to_ma120",
         "bb_width"
-      ]
+      ],
+      "last_update": "2026-11-25T04:11:36.274979"
     },
     "T5": {
       "trained_at": "2026-11-24T05:21:56.285566",
       "n_samples": 11918,
       "cv_mae": 4.9924,
-      "recent_mae": 4.9924,
+      "recent_mae": 5.6241,
       "best_iter": 67,
-      "total_trees": 67,
+      "total_trees": 97,
       "is_initial": false,
       "label": "1주 후",
       "top3": [
         "price_to_ma120",
         "bb_width",
         "macd_hist"
-      ]
+      ],
+      "last_update": "2026-11-25T04:11:36.289787"
     },
     "T21": {
       "trained_at": "2026-11-24T05:21:56.527017",
       "n_samples": 10179,
       "cv_mae": 9.8658,
-      "recent_mae": 9.8658,
+      "recent_mae": 11.2528,
       "best_iter": 30,
-      "total_trees": 30,
+      "total_trees": 60,
       "is_initial": false,
       "label": "1개월 후",
       "top3": [
         "price_to_ma120",
         "p1_p2_ratio",
         "bb_width"
-      ]
+      ],
+      "last_update": "2026-11-25T04:11:36.302073"
     },
     "T63": {
       "trained_at": "2026-11-24T05:21:56.765338",
       "n_samples": 5943,
       "cv_mae": 13.3982,
-      "recent_mae": 13.3982,
+      "recent_mae": 10.8733,
       "best_iter": 60,
-      "total_trees": 60,
+      "total_trees": 90,
       "is_initial": false,
       "label": "3개월 후",
       "top3": [
         "p1_p2_ratio",
         "p2",
         "price_to_ma120"
-      ]
+      ],
+      "last_update": "2026-11-25T04:11:36.315188"
     }
   },
   "last_full": {
