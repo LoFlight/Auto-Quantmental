@@ -128,72 +128,68 @@
   ],
   "horizons": {
     "T1": {
-      "trained_at": "2026-11-24T05:21:55.954902",
-      "n_samples": 12354,
-      "cv_mae": 2.1831,
-      "recent_mae": 2.6115,
-      "best_iter": 152,
-      "total_trees": 182,
+      "trained_at": "2026-11-25T04:32:34.518205",
+      "n_samples": 12455,
+      "cv_mae": 2.1977,
+      "recent_mae": 2.1977,
+      "best_iter": 162,
+      "total_trees": 162,
       "is_initial": false,
       "label": "다음날",
       "top3": [
         "market_breadth",
         "price_to_ma120",
-        "bb_width"
-      ],
-      "last_update": "2026-11-25T04:11:36.274979"
+        "pct_change"
+      ]
     },
     "T5": {
-      "trained_at": "2026-11-24T05:21:56.285566",
-      "n_samples": 11918,
-      "cv_mae": 4.9924,
-      "recent_mae": 5.6241,
-      "best_iter": 67,
-      "total_trees": 97,
+      "trained_at": "2026-11-25T04:32:34.999951",
+      "n_samples": 12019,
+      "cv_mae": 4.9989,
+      "recent_mae": 4.9989,
+      "best_iter": 61,
+      "total_trees": 61,
       "is_initial": false,
       "label": "1주 후",
       "top3": [
         "price_to_ma120",
         "bb_width",
-        "macd_hist"
-      ],
-      "last_update": "2026-11-25T04:11:36.289787"
+        "market_breadth"
+      ]
     },
     "T21": {
-      "trained_at": "2026-11-24T05:21:56.527017",
-      "n_samples": 10179,
-      "cv_mae": 9.8658,
-      "recent_mae": 11.2528,
-      "best_iter": 30,
-      "total_trees": 60,
+      "trained_at": "2026-11-25T04:32:35.353958",
+      "n_samples": 10280,
+      "cv_mae": 9.9151,
+      "recent_mae": 9.9151,
+      "best_iter": 28,
+      "total_trees": 28,
       "is_initial": false,
       "label": "1개월 후",
       "top3": [
         "price_to_ma120",
-        "p1_p2_ratio",
+        "macd_hist",
         "bb_width"
-      ],
-      "last_update": "2026-11-25T04:11:36.302073"
+      ]
     },
     "T63": {
-      "trained_at": "2026-11-24T05:21:56.765338",
-      "n_samples": 5943,
-      "cv_mae": 13.3982,
-      "recent_mae": 10.8733,
-      "best_iter": 60,
-      "total_trees": 90,
+      "trained_at": "2026-11-25T04:32:35.639251",
+      "n_samples": 6041,
+      "cv_mae": 13.5367,
+      "recent_mae": 13.5367,
+      "best_iter": 26,
+      "total_trees": 26,
       "is_initial": false,
       "label": "3개월 후",
       "top3": [
         "p1_p2_ratio",
         "p2",
         "price_to_ma120"
-      ],
-      "last_update": "2026-11-25T04:11:36.315188"
+      ]
     }
   },
   "last_full": {
-    "T1,T5,T21,T63,T126,T252": "2026-11-24T05:21:56.775931",
+    "T1,T5,T21,T63,T126,T252": "2026-11-25T04:32:35.654518",
     "T1": "2026-11-24T04:07:36.485801",
     "T5": "2026-11-24T04:07:37.105156",
     "T21": "2026-08-31T23:24:43.189759"
