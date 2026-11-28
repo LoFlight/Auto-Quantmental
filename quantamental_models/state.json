@@ -125,68 +125,73 @@
     "2026-11-20",
     "2026-11-23",
     "2026-11-24",
-    "2026-11-25"
+    "2026-11-25",
+    "2026-11-27"
   ],
   "horizons": {
     "T1": {
       "trained_at": "2026-11-27T03:39:15.331462",
       "n_samples": 12556,
       "cv_mae": 2.1908,
-      "recent_mae": 2.1908,
+      "recent_mae": 2.9693,
       "best_iter": 151,
-      "total_trees": 151,
+      "total_trees": 181,
       "is_initial": false,
       "label": "다음날",
       "top3": [
         "market_breadth",
         "price_to_ma120",
         "bb_width"
-      ]
+      ],
+      "last_update": "2026-11-28T00:32:03.384636"
     },
     "T5": {
       "trained_at": "2026-11-27T03:39:15.745369",
       "n_samples": 12120,
       "cv_mae": 5.0112,
-      "recent_mae": 5.0112,
+      "recent_mae": 5.9145,
       "best_iter": 58,
-      "total_trees": 58,
+      "total_trees": 88,
       "is_initial": false,
       "label": "1주 후",
       "top3": [
         "price_to_ma120",
         "bb_width",
         "market_breadth"
-      ]
+      ],
+      "last_update": "2026-11-28T00:32:03.398780"
     },
     "T21": {
       "trained_at": "2026-11-27T03:39:16.036723",
       "n_samples": 10381,
       "cv_mae": 9.9707,
-      "recent_mae": 9.9707,
+      "recent_mae": 11.4982,
       "best_iter": 22,
-      "total_trees": 22,
+      "total_trees": 52,
       "is_initial": false,
       "label": "1개월 후",
       "top3": [
         "price_to_ma120",
         "bb_width",
         "macd_hist"
-      ]
+      ],
+      "last_update": "2026-11-28T00:32:03.410716"
     },
     "T63": {
       "trained_at": "2026-11-27T03:39:16.319725",
       "n_samples": 6139,
       "cv_mae": 13.4876,
-      "recent_mae": 13.4876,
+      "recent_mae": 11.6883,
       "best_iter": 38,
-      "total_trees": 38,
+      "total_trees": 68,
       "is_initial": false,
       "label": "3개월 후",
       "top3": [
         "p1_p2_ratio",
         "price_to_ma120",
         "p2"
-      ]
+      ],
+      "last_update": "2026-11-28T00:32:03.422846"
     }
   },
   "last_full": {
